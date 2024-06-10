@@ -1,0 +1,27 @@
+{
+  "name": "be",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haivinhh/LVTN.git"
+  },
+  "keywords": [
+    "lvtn"
+  ],
+  "author": "haivinh",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/haivinhh/LVTN/issues"
+  },
+  "homepage": "https://github.com/haivinhh/LVTN#readme",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mysql": "^2.18.1"
+  }
+}
