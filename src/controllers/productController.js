@@ -9,23 +9,29 @@ const getAllProducts = (req, res) => {
     res.json(results);
   });
 };
-const getAlldanhMucSP = (req, res) => {
-    connection.query("SELECT * FROM danhMucSP", (err, results) => {
-      if (err) {
-        return res.status(500).send(err);
-      }
-      res.json(results);
-    });
-  };
-  
-  const getAlldongDT = (req, res) => {
-    connection.query("SELECT * FROM dongDT", (err, results) => {
-      if (err) {
-        return res.status(500).send(err);
-      }
-      res.json(results);
-    });
-  };
+const getProductsByIDDanhMucSP = (req, res) => {
+  const { idDanhMuc } = req.params;
+  const query = "SELECT * FROM sanPham WHERE danhMucSP = ?";
+  connection.query(query, [idDanhMuc], (err, results) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    res.json(results);
+  });
+};
+const getProductById = (req, res) => {
+  const { idSanPham } = req.params;
+  const query = "SELECT * FROM sanPham WHERE idSanPham = ?";
+  connection.query(query, [idSanPham], (err, results) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    if (results.length === 0) {
+      return res.status(404).send("Sản phẩm không tồn tại");
+    }
+    res.json(results[0]);
+  });
+};
 
 const addProduct = (req, res) => {
   const {
@@ -113,8 +119,8 @@ const deleteProduct = (req, res) => {
 
 module.exports = {
   getAllProducts,
-  getAlldanhMucSP,
-  getAlldongDT,
+  getProductsByIDDanhMucSP,
+  getProductById,
   addProduct,
   updateProduct,
   deleteProduct,

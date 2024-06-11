@@ -1,12 +1,27 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getAllProducts,getAlldanhMucSP,getAlldongDT, addProduct, updateProduct, deleteProduct } = require('../controllers/productController');
+const {
+  getAllProducts,
+  getProductsByIDDanhMucSP,
+  getProductById,
+  addProduct,
+  updateProduct,
+  deleteProduct,
+} = require("../controllers/productController");
+const { getAlldanhMucSP } = require("../controllers/danhMucSPController");
+const { getAlldongDT } = require("../controllers/dongDTController");
 
-router.get('/sanpham', getAllProducts);
-router.get('/danhmucsp', getAlldanhMucSP);
-router.get('/dongdt', getAlldongDT);
-router.post('/sanpham', addProduct);
-router.put('/sanpham/:idSanPham', updateProduct);
-router.delete('/sanpham/:idSanPham', deleteProduct);
+//sanpham
+router.get("/sanpham", getAllProducts);
+router.get("/sanpham/danhmuc/:idDanhMuc", getProductsByIDDanhMucSP);
+router.get("/sanpham/detail/:idSanPham", getProductById);
+router.post("/sanpham", addProduct);
+router.put("/sanpham/:idSanPham", updateProduct);
+router.delete("/sanpham/:idSanPham", deleteProduct);
+//danhmucsp
+router.get("/danhmucsp", getAlldanhMucSP);
+
+//dongdt
+router.get("/dongdt", getAlldongDT);
 
 module.exports = router;
