@@ -32,6 +32,18 @@ const getProductById = (req, res) => {
     res.json(results[0]);
   });
 };
+const searchProductByName = (req, res) => {
+  const { productName } = req.params;
+  const query = "SELECT * FROM sanPham WHERE tenSanPham LIKE ?";
+  const searchTerm = `%${productName}%`; 
+  connection.query(query, [searchTerm], (err, results) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    res.json(results);
+  });
+};
+
 
 const addProduct = (req, res) => {
   const {
@@ -121,6 +133,7 @@ module.exports = {
   getAllProducts,
   getProductsByIDDanhMucSP,
   getProductById,
+  searchProductByName,
   addProduct,
   updateProduct,
   deleteProduct,

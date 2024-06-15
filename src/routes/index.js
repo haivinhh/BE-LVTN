@@ -4,6 +4,7 @@ const {
   getAllProducts,
   getProductsByIDDanhMucSP,
   getProductById,
+  searchProductByName,
   addProduct,
   updateProduct,
   deleteProduct,
@@ -15,6 +16,8 @@ const { getAlldongDT } = require("../controllers/dongDTController");
 router.get("/sanpham", getAllProducts);
 router.get("/sanpham/danhmuc/:idDanhMuc", getProductsByIDDanhMucSP);
 router.get("/sanpham/detail/:idSanPham", getProductById);
+
+router.get('/sanpham/search/:productName', searchProductByName);
 router.post("/sanpham", addProduct);
 router.put("/sanpham/:idSanPham", updateProduct);
 router.delete("/sanpham/:idSanPham", deleteProduct);
