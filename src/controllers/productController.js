@@ -32,6 +32,27 @@ const getProductById = (req, res) => {
     res.json(results[0]);
   });
 };
+const getPhoneModelsByPhoneType = (req, res) => {
+  const { idSanPham } = req.params;
+
+  const query = `
+    SELECT d2.*
+    FROM sanPham sp
+    JOIN dongDT d1 ON sp.dongDT = d1.idDongDT
+    JOIN dongDT d2 ON d1.loaiDienThoai = d2.loaiDienThoai
+    WHERE sp.idSanPham = ?;
+  `;
+
+  connection.query(query, [idSanPham], (err, results) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    if (results.length === 0) {
+      return res.status(404).send("Không có dòng điện thoại nào cùng loại");
+    }
+    res.json(results);
+  });
+};
 const searchProductByName = (req, res) => {
   const { productName } = req.params;
   const query = "SELECT * FROM sanPham WHERE tenSanPham LIKE ?";
@@ -128,13 +149,22 @@ const deleteProduct = (req, res) => {
     });
   };
   
+  
 
 module.exports = {
+  //get
   getAllProducts,
   getProductsByIDDanhMucSP,
   getProductById,
+  getPhoneModelsByPhoneType,
+  //search
   searchProductByName,
+  //fillter
+
+  //add
   addProduct,
+  //up
   updateProduct,
+  //del
   deleteProduct,
 };
