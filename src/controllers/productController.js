@@ -53,6 +53,75 @@ const getPhoneModelsByPhoneType = (req, res) => {
     res.json(results);
   });
 };
+const getProductsByIDLoaiDT = (req, res) => {
+  const { idLoaiDT } = req.params;
+  const query = `
+    SELECT sp.*
+    FROM sanPham sp
+    JOIN dongDT d ON sp.dongDT = d.idDongDT
+    JOIN loaiDienThoai ldt ON d.loaiDienThoai = ldt.idLoaiDT
+    WHERE ldt.idLoaiDT = ?
+  `;
+  connection.query(query, [idLoaiDT], (err, results) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    res.json(results);
+  });
+};
+const getProductsByIDDongDT = (req, res) => {
+  const { idDongDT } = req.params;
+  const query = `
+    SELECT sp.*
+    FROM sanPham sp
+    WHERE sp.dongDT = ?
+  `;
+  connection.query(query, [idDongDT], (err, results) => {
+    if (err) {
+      return res.status(500).send(err);
+    }
+    res.json(results);
+  });
+};
+const getFilteredProducts = (req, res) => {
+  const { idLoaiDT, idDongDT, idDanhMucSP } = req.query;
+
+  // Base query
+  let query = "SELECT sp.* FROM sanPham sp JOIN dongDT d ON sp.dongDT = d.idDongDT JOIN loaiDienThoai ldt ON d.loaiDienThoai = ldt.idLoaiDT WHERE 1=1";
+  const queryParams = [];
+
+  // Add filters dynamically
+  if (idLoaiDT) {
+    const idLoaiDTArray = idLoaiDT.split(',').map(Number); // Chuyển chuỗi thành mảng các số
+    query += " AND ldt.idLoaiDT IN (" + idLoaiDTArray.map(() => '?').join(',') + ")";
+    queryParams.push(...idLoaiDTArray);
+  }
+
+  if (idDongDT) {
+    const idDongDTArray = idDongDT.split(',').map(Number); // Chuyển chuỗi thành mảng các số
+    query += " AND sp.dongDT IN (" + idDongDTArray.map(() => '?').join(',') + ")";
+    queryParams.push(...idDongDTArray);
+  }
+
+  if (idDanhMucSP) {
+    const idDanhMucArray = idDanhMucSP.split(',').map(Number); // Chuyển chuỗi thành mảng các số
+    query += " AND sp.danhMucSP IN (" + idDanhMucArray.map(() => '?').join(',') + ")";
+    queryParams.push(...idDanhMucArray);
+  }
+
+  // Execute the query with the constructed parameters
+  connection.query(query, queryParams, (err, results) => {
+    if (err) {
+      return res.status(500).send(err); // Return error if any
+    }
+    if (results.length === 0) {
+      return res.status(404).send("Không có sản phẩm nào phù hợp với bộ lọc"); // Return message if no products found
+    }
+    res.json(results); // Return the results as JSON
+  });
+};
+
+
 const searchProductByName = (req, res) => {
   const { productName } = req.params;
   const query = "SELECT * FROM sanPham WHERE tenSanPham LIKE ?";
@@ -157,6 +226,9 @@ module.exports = {
   getProductsByIDDanhMucSP,
   getProductById,
   getPhoneModelsByPhoneType,
+  getProductsByIDLoaiDT,
+  getProductsByIDDongDT,
+  getFilteredProducts,
   //search
   searchProductByName,
   //fillter

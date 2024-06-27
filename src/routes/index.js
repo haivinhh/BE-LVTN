@@ -9,6 +9,9 @@ const {
   addProduct,
   updateProduct,
   deleteProduct,
+  getProductsByIDLoaiDT,
+  getProductsByIDDongDT,
+  getFilteredProducts
 } = require("../controllers/productController");
 const { getAlldanhMucSP } = require("../controllers/danhMucSPController");
 const { getAlldongDT } = require("../controllers/dongDTController");
@@ -20,6 +23,10 @@ router.get("/sanpham/danhmuc/:idDanhMuc", getProductsByIDDanhMucSP);
 router.get("/sanpham/detail/:idSanPham", getProductById);
 router.get('/sanpham/search/:productName', searchProductByName);
 router.get('/sanpham/getdongdtbyidsp/:idSanPham', getPhoneModelsByPhoneType);
+router.get('/sanpham/dongdt/:idDongDT', getProductsByIDDongDT);
+router.get('/sanpham/loaiDT/:idLoaiDT', getProductsByIDLoaiDT);
+router.get('/sanpham/filter',getFilteredProducts);
+
 router.post("/sanpham", addProduct);
 router.put("/sanpham/:idSanPham", updateProduct);
 router.delete("/sanpham/:idSanPham", deleteProduct);
