@@ -84,7 +84,7 @@ const getProductsByIDDongDT = (req, res) => {
   });
 };
 const getFilteredProducts = (req, res) => {
-  const { idLoaiDT, idDongDT, idDanhMucSP } = req.query;
+  const { idLoaiDT, idDongDT, idDanhMuc } = req.query;
 
   // Base query
   let query = "SELECT sp.* FROM sanPham sp JOIN dongDT d ON sp.dongDT = d.idDongDT JOIN loaiDienThoai ldt ON d.loaiDienThoai = ldt.idLoaiDT WHERE 1=1";
@@ -92,19 +92,19 @@ const getFilteredProducts = (req, res) => {
 
   // Add filters dynamically
   if (idLoaiDT) {
-    const idLoaiDTArray = idLoaiDT.split(',').map(Number); // Chuyển chuỗi thành mảng các số
+    const idLoaiDTArray = idLoaiDT.split(',').map(Number); // Convert string to array of numbers
     query += " AND ldt.idLoaiDT IN (" + idLoaiDTArray.map(() => '?').join(',') + ")";
     queryParams.push(...idLoaiDTArray);
   }
 
   if (idDongDT) {
-    const idDongDTArray = idDongDT.split(',').map(Number); // Chuyển chuỗi thành mảng các số
+    const idDongDTArray = idDongDT.split(',').map(Number); // Convert string to array of numbers
     query += " AND sp.dongDT IN (" + idDongDTArray.map(() => '?').join(',') + ")";
     queryParams.push(...idDongDTArray);
   }
 
-  if (idDanhMucSP) {
-    const idDanhMucArray = idDanhMucSP.split(',').map(Number); // Chuyển chuỗi thành mảng các số
+  if (idDanhMuc) {
+    const idDanhMucArray = idDanhMuc.split(',').map(Number); // Convert string to array of numbers
     query += " AND sp.danhMucSP IN (" + idDanhMucArray.map(() => '?').join(',') + ")";
     queryParams.push(...idDanhMucArray);
   }
@@ -115,11 +115,12 @@ const getFilteredProducts = (req, res) => {
       return res.status(500).send(err); // Return error if any
     }
     if (results.length === 0) {
-      return res.status(404).send("Không có sản phẩm nào phù hợp với bộ lọc"); // Return message if no products found
+      return res.json(false); // Return false if no products found
     }
     res.json(results); // Return the results as JSON
   });
 };
+
 
 
 const searchProductByName = (req, res) => {
