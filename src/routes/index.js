@@ -1,53 +1,63 @@
 const express = require("express");
 const router = express.Router();
-const {
-  getAllProducts,
-  getProductsByIDDanhMucSP,
-  getProductById,
-  getPhoneModelsByPhoneType,
-  searchProductByName,
-  addProduct,
-  updateProduct,
-  deleteProduct,
-  getProductsByIDLoaiDT,
-  getProductsByIDDongDT,
-  getFilteredProducts,
-} = require("../controllers/productController");
-const { getAlldanhMucSP } = require("../controllers/danhMucSPController");
-const { getAlldongDT } = require("../controllers/dongDTController");
-const { getAllloaiDT } = require("../controllers/loaiDienThoaiController");
-const {
-  addToCart,
-  getCart,
-  createOrder,
-  clearCart,
-} = require("../controllers/cartController");
+
+const productController = require("../controllers/productController");
+const danhMucSPController = require("../controllers/danhMucSPController");
+const dongDTController = require("../controllers/dongDTController");
+const loaiDienThoaiController = require("../controllers/loaiDienThoaiController");
+const cartController = require("../controllers/cartController");
+const customersController = require("../controllers/customersController");
+const usersController = require("../controllers/usersController");
+const midddlewareController = require("../controllers/middlewareController");
+
+
 
 //sanpham
-router.get("/sanpham", getAllProducts);
-router.get("/sanpham/danhmuc/:idDanhMuc", getProductsByIDDanhMucSP);
-router.get("/sanpham/detail/:idSanPham", getProductById);
-router.get("/sanpham/search/:productName", searchProductByName);
-router.get("/sanpham/getdongdtbyidsp/:idSanPham", getPhoneModelsByPhoneType);
-router.get("/sanpham/dongdt/:idDongDT", getProductsByIDDongDT);
-router.get("/sanpham/loaiDT/:idLoaiDT", getProductsByIDLoaiDT);
-router.get("/sanpham/filter", getFilteredProducts);
+router.get("/sanpham", productController.getAllProducts);
+router.get("/sanpham/danhmuc/:idDanhMuc", productController.getProductsByIDDanhMucSP);
+router.get("/sanpham/detail/:idSanPham", productController.getProductById);
+router.get("/sanpham/search/:productName", productController.searchProductByName);
+router.get("/sanpham/getdongdtbyidsp/:idSanPham", productController.getPhoneModelsByPhoneType);
+router.get("/sanpham/dongdt/:idDongDT", productController.getProductsByIDDongDT);
+router.get("/sanpham/loaiDT/:idLoaiDT", productController.getProductsByIDLoaiDT);
+router.get("/sanpham/filter", productController.getFilteredProducts);
 
-router.post("/sanpham", addProduct);
-router.put("/sanpham/:idSanPham", updateProduct);
-router.delete("/sanpham/:idSanPham", deleteProduct);
+router.post("/sanpham", productController.addProduct);
+router.put("/sanpham/:idSanPham", productController.updateProduct);
+router.delete("/sanpham/:idSanPham", productController.deleteProduct);
 //danhmucsp
-router.get("/danhmucsp", getAlldanhMucSP);
+router.get("/danhmucsp", danhMucSPController.getAlldanhMucSP);
 
 //dongdt
-router.get("/dongdt", getAlldongDT);
+router.get("/dongdt", dongDTController.getAlldongDT);
 
 //loaidt
-router.get("/loaiDT", getAllloaiDT);
-module.exports = router;
+router.get("/loaiDT", loaiDienThoaiController.getAllloaiDT);
+
 
 //giohang
-router.post("/cart/add", addToCart);
-router.post("/cart/createorder", createOrder);
-router.get("/cart", getCart);
-router.get("/cart/clear", clearCart);
+router.post("/cart/add", cartController.addToCart);
+router.post("/cart/createorder", midddlewareController.verifyToken,cartController.createOrder);
+router.get("/cart", cartController.getCart);
+router.get("/cart/clear", cartController.clearCart);
+
+//taikhoankh
+router.post("/cusregister", customersController.cusregister);
+router.post("/cuslogin", customersController.cuslogin);
+router.post("/cuslogout", midddlewareController.verifyToken,customersController.cuslogout);
+router.post("/refershtokencus", customersController.requestRefershToken);
+
+
+//taikhoannv
+router.post("/register", usersController.register);
+router.post("/login", usersController.login);
+router.post("/logout", midddlewareController.verifyToken,usersController.logout);
+router.post("/refershtoken", usersController.requestRefershToken);
+router.get("/getallcustomers", midddlewareController.verifyToken,usersController.getAllCustomers);
+router.get("/getallusers", midddlewareController.verifyToken,usersController.getAllUsers);
+router.delete("/deletecustomer", usersController.deleteUser);
+router.delete("/deleteuser", midddlewareController.verifyTokenAndIsAdmin,usersController.deleteUser);
+
+
+
+module.exports = router;
