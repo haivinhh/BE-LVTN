@@ -10,8 +10,6 @@ const customersController = require("../controllers/customersController");
 const usersController = require("../controllers/usersController");
 const midddlewareController = require("../controllers/middlewareController");
 
-
-
 //sanpham
 router.get("/sanpham", productController.getAllProducts);
 router.get("/sanpham/danhmuc/:idDanhMuc", productController.getProductsByIDDanhMucSP);
@@ -38,7 +36,7 @@ router.get("/loaiDT", loaiDienThoaiController.getAllloaiDT);
 //giohang
 router.post("/cart/add", cartController.addToCart);
 router.post("/cart/createorder", midddlewareController.verifyToken,cartController.createOrder);
-router.get("/cart", cartController.getCart);
+router.get("/cart", midddlewareController.verifyToken,cartController.getCart);
 router.get("/cart/clear", cartController.clearCart);
 
 //taikhoankh

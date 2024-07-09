@@ -50,7 +50,7 @@ const customersController = {
       },
       process.env.JWT_ACCESS_KEY,
       {
-        expiresIn: "30s",
+        expiresIn: "50s",
       }
     );
   },
@@ -102,11 +102,11 @@ const customersController = {
           path: "/",
           sameSite: "strict",
         });
-        res.status(200).json({ message: "Đăng nhập thành công.", accessToken });
+        res.status(200).json({ message: true, accessToken });
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Lỗi server khi đăng nhập." });
+      res.status(500).json({ message: false });
     }
   },
   cuslogout: async (req,res) => {

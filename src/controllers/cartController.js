@@ -43,10 +43,9 @@ const cartController = {
             throw err;
           }
 
-          // Update the total of the detail cart record
-          updateDetailCartTotal(idDonHang, idSanPham, () => {
+          cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
             // Update cart total
-            updateCartTotal(idDonHang);
+            cartController.updateCartTotal(idDonHang);
           });
 
           res
@@ -60,8 +59,8 @@ const cartController = {
   },
 
   getCart: (req, res) => {
-    const { idUser } = req.body;
-
+    const  idUser  = req.user.idUser;
+    console.log(idUser);
     if (!idUser) {
       return res
         .status(400)

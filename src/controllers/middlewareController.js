@@ -10,11 +10,12 @@ const middlewareController = {
         if (err) {
           return res.status(403).json({ message: "Token hết hạn hoặc không hợp lệ." });
         }
-        req.user = user; // Lưu thông tin người dùng từ token vào req.user để sử dụng trong các route sau
+        req.user = user;
+        console.log(req.user.idUser) // Lưu thông tin người dùng từ token vào req.user để sử dụng trong các route sau
         next(); // Cho phép tiếp tục vào route kế tiếp
       });
     } else {
-      res.status(401).json({ message: "Chưa được xác thực." });
+      return res.status(401).json({ message: "Chưa được xác thực." });
     }
   },
   verifyTokenAndIsAdmin: (req, res, next) => {
@@ -25,6 +26,7 @@ const middlewareController = {
         return res.status(403).json({ message: "Bạn không có quyền truy cập." });
         
       }
+      console.log(req.user.admin)
       next(); // Nếu là admin, cho phép tiếp tục vào route kế tiếp
     });
   }
