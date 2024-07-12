@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const connection = require("../models/db");
 const jwt = require("jsonwebtoken");
 
-let refershTokens = [];
+let refreshTokens = [];
 const usersController = {
   register: async (req, res) => {
     const { userName, passWord, SDT, email, diaChi, hoTen } = req.body;
@@ -95,9 +95,9 @@ const usersController = {
 
         // Gửi phản hồi thành công về client
         const accessToken = usersController.generateAccessToken(results[0]);
-        const refershToken = usersController.generateRefershToken(results[0]);
-        refershTokens.push(refershToken);
-        res.cookie("refershToken", refershToken, {
+        const refreshToken = usersController.generateRefreshToken(results[0]);
+        refreshTokens.push(refreshToken);
+        res.cookie("refershToken", refreshToken, {
           httpOnly: true,
           secure: false,
           path: "/",
@@ -112,25 +112,25 @@ const usersController = {
   },
   logout: async (req,res) => {
     res.clearCookie("refershToken");
-    refershTokens=refershTokens.filter(token =>token !== req.cookies.refershToken);
+    refershTokens=refershTokens.filter(token =>token !== req.cookies.refreshToken);
     res.status(200).json("logout thành công")
   },
-  requestRefershToken: async(req, res) =>{
-    const refershToken = req.cookies.refershToken;
-    if(!refershToken)
-        return res.status(401).json("chưa xác được xác thực");
-    if(!refershTokens.includes(refershToken)){
+  requestRefreshToken: async(req, res) =>{
+    const refreshToken = req.cookies.refreshToken;
+    if(!refreshToken)
+        return res.status(401).json("chưa được xác thực");
+    if(!refreshTokens.includes(refreshToken)){
         return res.status(403).json("Refersh token không hợp lệ");
     }
-    jwt.verify(refershToken, process.env.JWT_REFRESH_KEY,(err,user) => {
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY,(err,user) => {
         if(err){
             console.log(err);
         }
-        refershTokens = refershTokens.filter((token)=>token !== refershToken)
+        refreshTokens = refreshTokens.filter((token)=>token !== refreshToken)
         const newAccessToken = usersController.generateAccessToken(user);
-        const newRefershToken = usersController.generateRefershToken(user);
-        refershTokens.push(newRefershToken);
-        res.cookie("refershToken", newRefershToken,{
+        const newRefreshToken = usersController.generateRefreshToken(user);
+        refreshTokens.push(newRefreshToken);
+        res.cookie("refreshToken", newRefreshToken,{
             httpOnly: true,
           secure: false,
           path: "/",

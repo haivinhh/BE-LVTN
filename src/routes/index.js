@@ -43,14 +43,14 @@ router.get("/cart/clear", cartController.clearCart);
 router.post("/cusregister", customersController.cusregister);
 router.post("/cuslogin", customersController.cuslogin);
 router.post("/cuslogout", midddlewareController.verifyToken,customersController.cuslogout);
-router.post("/refershtokencus", customersController.requestRefershToken);
+router.post("/refreshtokencus", customersController.requestRefreshToken);
 
 
 //taikhoannv
 router.post("/register", usersController.register);
 router.post("/login", usersController.login);
 router.post("/logout", midddlewareController.verifyToken,usersController.logout);
-router.post("/refershtoken", usersController.requestRefershToken);
+router.post("/refreshtoken", usersController.requestRefreshToken);
 router.get("/getallcustomers", midddlewareController.verifyToken,usersController.getAllCustomers);
 router.get("/getallusers", midddlewareController.verifyToken,usersController.getAllUsers);
 router.delete("/deletecustomer", usersController.deleteUser);

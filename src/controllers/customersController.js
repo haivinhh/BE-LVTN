@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const connection = require("../models/db");
 const jwt = require("jsonwebtoken");
 
-let refershTokenCuss = [];
+let refreshTokenCuss = [];
 const customersController = {
   cusregister: async (req, res) => {
     const { userName, passWord, SDT, email, diaChi, hoTen } = req.body;
@@ -50,11 +50,11 @@ const customersController = {
       },
       process.env.JWT_ACCESS_KEY,
       {
-        expiresIn: "50s",
+        expiresIn: "10s",
       }
     );
   },
-  generateRefershToken: (user) => {
+  generateRefreshToken: (user) => {
     return jwt.sign(
       {
         idUser: user.idUser,
@@ -94,15 +94,16 @@ const customersController = {
 
         // Gửi phản hồi thành công về client
         const accessToken = customersController.generateAccessToken(results[0]);
-        const refershTokenCus = customersController.generateRefershToken(results[0]);
-        refershTokenCuss.push(refershTokenCus); 
-        res.cookie("refershTokenCus", refershTokenCus, {
+        const refreshTokenCus = customersController.generateRefreshToken(results[0]);
+        refreshTokenCuss.push(refreshTokenCus); 
+        res.cookie("refreshTokenCus", refreshTokenCus, {
           httpOnly: true,
           secure: false,
           path: "/",
           sameSite: "strict",
         });
         res.status(200).json({ message: true, accessToken });
+        console.log("gaaa: ",refreshTokenCus)
       });
     } catch (error) {
       console.error(error);
@@ -110,31 +111,32 @@ const customersController = {
     }
   },
   cuslogout: async (req,res) => {
-    res.clearCookie("refershTokenCus");
-    refershTokenCuss=refershTokenCuss.filter(token =>token !== req.cookies.refershTokenCus);
+    res.clearCookie("refreshTokenCus");
+    refreshTokenCuss=refreshTokenCuss.filter(token =>token !== req.cookies.refreshTokenCus);
     res.status(200).json("logout thành công")
   },
-  requestRefershToken: async(req, res) =>{
-    const refershTokenCus = req.cookies.refershTokenCus;
-    if(!refershTokenCus)
-        return res.status(401).json("chưa xác được xác thực");
-    if(refershTokenCuss.includes(refershTokenCus)){
-        return res.status(403).json("Refersh token không hợp lệ");
-    }
-    jwt.verify(refershTokenCus, process.env.JWT_REFRESH_KEY,(err,user) => {
-        if(err)
+  requestRefreshToken: async(req, res) =>{
+    const refreshTokenCus = req.cookies.refreshTokenCus;
+    console.log("asd:" ,refreshTokenCus)
+    if(!refreshTokenCus)
+        return res.status(401).json("chưa được xác thực");
+    
+    jwt.verify(refreshTokenCus, process.env.JWT_REFRESH_KEY,(err,user) => {
+        if(err){
             console.log(err);
-        refershTokenCus = refershTokenCuss.filter((token)=>token !== refershTokenCus)
+        }
+        refreshTokenCuss = refreshTokenCuss.filter((token)=>token !== refreshTokenCus)
         const newAccessTokenCus = customersController.generateAccessToken(user);
-        const newRefershTokenCus = customersController.generateRefershToken(user);
-        refershTokenCuss.push(newRefershTokenCus);
-        res.cookie("refershTokenCus", newRefershTokenCus,{
+        const newRefreshTokenCus = customersController.generateRefreshToken(user);
+        refreshTokenCuss.push(newRefreshTokenCus);
+        res.cookie("refreshTokenCus", newRefreshTokenCus,{
             httpOnly: true,
           secure: false,
           path: "/",
           sameSite: "strict",
         });
-        res.status(200).json({accessToken: "newAccessToken"});
+        res.status(200).json({accessToken: newAccessTokenCus});
+        console.log("refreshtokencusnew: " ,newRefreshTokenCus);
     });
   }
 };

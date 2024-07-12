@@ -23,36 +23,51 @@ const cartController = {
   },
 
   addToCart: (req, res) => {
-    const { idDonHang, idSanPham, soLuong } = req.body;
+    const { idUser, idSanPham, soLuong } = req.body;
 
     try {
-      if (!idDonHang || !idSanPham || !soLuong) {
-        throw new Error(
-          "Missing required fields: idDonHang, idSanPham, soLuong"
-        );
+      if (!idUser || !idSanPham || !soLuong) {
+        throw new Error("Missing required fields: idUser, idSanPham, soLuong");
       }
 
-      // Insert detail cart record
-      const insertDetailCartQuery =
-        "INSERT INTO chitietdonhang (idDonHang, idSanPham, soLuong) VALUES (?, ?, ?)";
-      connection.query(
-        insertDetailCartQuery,
-        [idDonHang, idSanPham, soLuong],
-        (err, result) => {
-          if (err) {
-            throw err;
-          }
-
-          cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
-            // Update cart total
-            cartController.updateCartTotal(idDonHang);
-          });
-
-          res
-            .status(201)
-            .json({ message: "Thêm vào giỏ hàng thành công", idDonHang });
+      // Query to get the unpaid order of the user
+      const getUnpaidOrderQuery = `
+        SELECT idDonHang FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'
+      `;
+      connection.query(getUnpaidOrderQuery, [idUser], (err, results) => {
+        if (err) {
+          throw err;
         }
-      );
+
+        // Check if there is an unpaid order
+        if (results.length === 0) {
+          return res.status(404).json({ message: "No unpaid order found for this user" });
+        }
+
+        const idDonHang = results[0].idDonHang;
+
+        // Insert detail cart record
+        const insertDetailCartQuery = `
+          INSERT INTO chitietdonhang (idDonHang, idSanPham, soLuong)
+          VALUES (?, ?, ?)
+        `;
+        connection.query(
+          insertDetailCartQuery,
+          [idDonHang, idSanPham, soLuong],
+          (err, result) => {
+            if (err) {
+              throw err;
+            }
+
+            // Update detail cart total and cart total
+            cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
+              cartController.updateCartTotal(idDonHang);
+            });
+
+            res.status(201).json({ message: "Thêm vào giỏ hàng thành công", idDonHang });
+          }
+        );
+      });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
