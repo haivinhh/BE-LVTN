@@ -34,10 +34,13 @@ router.get("/loaiDT", loaiDienThoaiController.getAllloaiDT);
 
 
 //giohang
-router.post("/cart/add", cartController.addToCart);
+router.post("/cart/add", midddlewareController.verifyToken,cartController.addToCart);
 router.post("/cart/createorder", midddlewareController.verifyToken,cartController.createOrder);
 router.get("/cart", midddlewareController.verifyToken,cartController.getCart);
-router.get("/cart/clear", cartController.clearCart);
+router.delete("/cart/clear", cartController.clearCart);
+router.put("/cart/updatecartitem", midddlewareController.verifyToken,cartController.updateCartItem);
+router.delete("/cart/deletecartitem", midddlewareController.verifyToken,cartController.deleteCartItem);
+
 
 //taikhoankh
 router.post("/cusregister", customersController.cusregister);
