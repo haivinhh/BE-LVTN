@@ -50,7 +50,7 @@ const customersController = {
       },
       process.env.JWT_ACCESS_KEY,
       {
-        expiresIn: "10s",
+        expiresIn: "20s",
       }
     );
   },
@@ -138,6 +138,22 @@ const customersController = {
         res.status(200).json({accessToken: newAccessTokenCus});
         console.log("refreshtokencusnew: " ,newRefreshTokenCus);
     });
+  },
+  getCusbyId: async (req, res) => {
+    const idUser = req.user.idUser;
+    if (!idUser) {
+        return res
+            .status(400)
+            .json({ message: "Missing required field: idUser" });
+    }
+    const query = `SELECT * FROM taikhoankh WHERE idUser = ?`
+    connection.query(query, [idUser], (err, results) => {
+      if (err) {
+          return res.status(500).json({ message: err.message });
+      }
+      console.log("thanh cong")
+      res.json(results);
+  });
   }
 };
 
