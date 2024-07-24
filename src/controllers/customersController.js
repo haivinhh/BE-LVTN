@@ -5,40 +5,55 @@ const jwt = require("jsonwebtoken");
 
 let refreshTokenCuss = [];
 const customersController = {
-  cusregister: async (req, res) => {
+  cusregister : async (req, res) => {
     const { userName, passWord, SDT, email, diaChi, hoTen } = req.body;
-
+  
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Địa chỉ email không hợp lệ" });
     }
-
-    // Generate salt and hash the password
-    bcrypt.genSalt(10, (err, salt) => {
-      bcrypt.hash(passWord, salt, (err, hashedPassword) => {
+  
+    // Check if userName already exists
+    const checkUserQuery = 'SELECT * FROM taikhoankh WHERE userName = ?';
+    connection.query(checkUserQuery, [userName], (err, results) => {
+      if (err) {
+        console.error("Lỗi khi kiểm tra tên người dùng:", err);
+        return res.status(500).json({ message: "Đăng ký thất bại" });
+      }
+  
+      if (results.length > 0) {
+        return res.status(400).json({ message: "Tên người dùng đã tồn tại" });
+      }
+  
+      // Generate salt and hash the password
+      bcrypt.genSalt(10, (err, salt) => {
         if (err) throw err;
-
-        // Store hashedPassword in your database
-        const user = {
-          userName,
-          passWord: hashedPassword,
-          SDT,
-          email,
-          diaChi,
-          hoTen,
-        };
-
-        const sql = "INSERT INTO taikhoankh SET ?";
-
-        connection.query(sql, user, (err, result) => {
-          if (err) {
-            console.error("Đăng ký thất bại:", err);
-            res.status(500).json({ message: "Đăng ký thất bại" });
-          } else {
-            console.log("Đăng ký thành công");
-            res.status(200).json({ message: "Đăng ký thành công" });
-          }
+  
+        bcrypt.hash(passWord, salt, (err, hashedPassword) => {
+          if (err) throw err;
+  
+          // Store hashedPassword in your database
+          const user = {
+            userName,
+            passWord: hashedPassword,
+            SDT,
+            email,
+            diaChi,
+            hoTen,
+          };
+  
+          const sql = "INSERT INTO taikhoankh SET ?";
+  
+          connection.query(sql, user, (err, result) => {
+            if (err) {
+              console.error("Đăng ký thất bại:", err);
+              res.status(500).json({ message: "Đăng ký thất bại" });
+            } else {
+              console.log("Đăng ký thành công");
+              res.status(200).json({ message: "Đăng ký thành công" });
+            }
+          });
         });
       });
     });
@@ -154,7 +169,129 @@ const customersController = {
       console.log("thanh cong")
       res.json(results);
   });
+  },
+  changePassword : async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const idUser = req.user.idUser; // Extract idUser from the token
+  
+    if (!idUser) {
+      return res.status(400).json({ message: "Missing required field: idUser" });
+    }
+  
+    try {
+      // Check if idUser exists in the database
+      const query = `SELECT * FROM taikhoankh WHERE idUser = ?`;
+      connection.query(query, [idUser], async (error, results) => {
+        if (error) {
+          console.error(error);
+          return res.status(500).json({ message: "Server error during password change." });
+        }
+  
+        // If idUser is not found
+        if (results.length === 0) {
+          return res.status(404).json({ message: "User not found." });
+        }
+  
+        const user = results[0];
+  
+        // Compare current password with the hashed password in the database
+        const match = await bcrypt.compare(currentPassword, user.passWord);
+        if (!match) {
+          return res.status(401).json({ message: "Current password is incorrect." });
+        }
+  
+        // Check if the new password is the same as the current password
+        const newPasswordMatch = await bcrypt.compare(newPassword, user.passWord);
+        if (newPasswordMatch) {
+          return res.status(400).json({ message: "New password cannot be the same as the current password." });
+        }
+  
+        // Hash the new password
+        bcrypt.genSalt(10, (err, salt) => {
+          if (err) throw err;
+  
+          bcrypt.hash(newPassword, salt, (err, hashedNewPassword) => {
+            if (err) throw err;
+  
+            // Update the password in the database
+            const updateQuery = `UPDATE taikhoankh SET passWord = ? WHERE idUser = ?`;
+            connection.query(updateQuery, [hashedNewPassword, idUser], (err, result) => {
+              if (err) {
+                console.error(err);
+                return res.status(500).json({ message: "Error updating password." });
+              }
+  
+              res.status(200).json({ message: "Password changed successfully." });
+            });
+          });
+        });
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server error." });
+    }
+
+  },
+  updateUser: async (req, res) => {
+    const { hoTen, SDT, email, diaChi } = req.body;
+    const idUser = req.user.idUser; // Lấy idUser từ token
+  
+    if (!idUser) {
+      console.log("Thiếu trường bắt buộc: idUser");
+      return res.status(400).json({ message: "Thiếu trường bắt buộc: idUser" });
+    }
+  
+    // Kiểm tra định dạng email nếu email được cung cấp
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        console.log("Địa chỉ email không hợp lệ");
+        return res.status(400).json({ message: "Địa chỉ email không hợp lệ" });
+      }
+    }
+  
+    const fieldsToUpdate = [];
+    const values = [];
+  
+    if (hoTen) {
+      fieldsToUpdate.push("hoTen = ?");
+      values.push(hoTen);
+    }
+  
+    if (SDT) {
+      fieldsToUpdate.push("SDT = ?");
+      values.push(SDT);
+    }
+  
+    if (email) {
+      fieldsToUpdate.push("email = ?");
+      values.push(email);
+    }
+  
+    if (diaChi) {
+      fieldsToUpdate.push("diaChi = ?");
+      values.push(diaChi);
+    }
+  
+    if (fieldsToUpdate.length === 0) {
+      console.log("Không có trường nào được cung cấp để cập nhật");
+      return res.status(400).json({ message: "Không có trường nào được cung cấp để cập nhật" });
+    }
+  
+    values.push(idUser);
+  
+    const updateQuery = `UPDATE taikhoankh SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
+    connection.query(updateQuery, values, (err, result) => {
+      if (err) {
+        console.error(err);
+        console.log("Lỗi khi cập nhật thông tin.");
+        return res.status(500).json({ success:false,message: "Lỗi khi cập nhật thông tin." });
+      }
+  
+      res.status(200).json({ success:false,message: "Cập nhật thông tin thành công." });
+    });
   }
+  
 };
 
 module.exports = customersController;

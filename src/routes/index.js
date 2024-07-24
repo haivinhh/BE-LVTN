@@ -49,6 +49,8 @@ router.post("/cusregister", customersController.cusregister);
 router.post("/cuslogin", customersController.cuslogin);
 router.post("/cuslogout", midddlewareController.verifyToken,customersController.cuslogout);
 router.post("/refreshtokencus", customersController.requestRefreshToken);
+router.post("/changepassword", midddlewareController.verifyToken, customersController.changePassword);
+router.put("/updateuser", midddlewareController.verifyToken, customersController.updateUser);
 
 
 
