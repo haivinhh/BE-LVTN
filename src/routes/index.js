@@ -38,6 +38,7 @@ router.post("/cart/add", midddlewareController.verifyToken,cartController.addToC
 router.post("/cart/createorder", midddlewareController.verifyToken,cartController.createOrder);
 router.get("/detailcart", midddlewareController.verifyToken,cartController.getDetailCart);
 router.get("/cart", midddlewareController.verifyToken,cartController.getCart);
+router.get("/getdetailcart/:idDonHang", midddlewareController.verifyToken,cartController.getDetailCartOfUser);
 router.delete("/cart/clear", cartController.clearCart);
 router.put("/cart/updatecartitem", midddlewareController.verifyToken,cartController.updateCartItem);
 router.delete("/cart/deletecartitem", midddlewareController.verifyToken,cartController.deleteCartItem);

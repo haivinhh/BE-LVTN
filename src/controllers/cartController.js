@@ -208,6 +208,42 @@ const cartController = {
       res.json(results);
     });
   },
+  getDetailCartOfUser: (req, res) => {
+    const idUser = req.user.idUser;
+    const { idDonHang } = req.params; // Extract idDonHang from the request body
+    console.log("User ID:", idUser);
+    console.log("Order ID:", idDonHang);
+  
+    if (!idUser) {
+      return res
+        .status(400)
+        .json({ message: "Missing required field: idUser" });
+    }
+  
+    if (!idDonHang) {
+      return res
+        .status(400)
+        .json({ message: "Missing required field: idDonHang" });
+    }
+  
+    const query = `
+        SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
+               p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
+               c.tongTienDH AS tongTienDH
+        FROM chitietdonhang dc
+        JOIN sanpham p ON dc.idSanPham = p.idSanPham
+        JOIN donhang c ON dc.idDonHang = c.idDonHang
+        WHERE c.idUser = ? AND dc.idDonHang = ? 
+    `;
+  
+    connection.query(query, [idUser, idDonHang], (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+  
+      res.json(results);
+    });
+  },
 
   updateDetailCartTotal: (cart_id, idSanPham, callback) => {
     const query = `
