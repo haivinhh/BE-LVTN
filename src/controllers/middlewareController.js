@@ -28,6 +28,14 @@ const middlewareController = {
       console.log(req.user.admin)
       next(); // Nếu là admin, cho phép tiếp tục vào route kế tiếp
     });
+  },
+  verifyTokenAndIsEmployee: (req, res, next) => {
+    middlewareController.verifyToken(req, res, () => {
+      if (!req.user || req.user.admin !== 0) {
+        return res.status(403).json({ message: "Bạn không phải là nhân viên." });
+      }
+      next(); // Nếu là nhân viên, cho phép tiếp tục vào route kế tiếp
+    });
   }
 
 };

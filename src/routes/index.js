@@ -20,9 +20,9 @@ router.get("/sanpham/dongdt/:idDongDT", productController.getProductsByIDDongDT)
 router.get("/sanpham/loaiDT/:idLoaiDT", productController.getProductsByIDLoaiDT);
 router.get("/sanpham/filter", productController.getFilteredProducts);
 
-router.post("/sanpham", productController.addProduct);
-router.put("/sanpham/:idSanPham", productController.updateProduct);
-router.delete("/sanpham/:idSanPham", productController.deleteProduct);
+router.post("/sanpham", midddlewareController.verifyTokenAndIsEmployee,productController.addProduct);
+router.put("/sanpham/:idSanPham", midddlewareController.verifyTokenAndIsEmployee,productController.updateProduct);
+router.delete("/sanpham/:idSanPham", midddlewareController.verifyTokenAndIsEmployee,productController.deleteProduct);
 //danhmucsp
 router.get("/danhmucsp", danhMucSPController.getAlldanhMucSP);
 
@@ -58,7 +58,7 @@ router.put("/updateuser", midddlewareController.verifyToken, customersController
 //taikhoannv
 router.post("/register", usersController.register);
 router.post("/login", usersController.login);
-router.post("/logout", midddlewareController.verifyToken,usersController.logout);
+router.post("/logout", midddlewareController.verifyTokenAndIsEmployee,usersController.logout);
 router.post("/refreshtoken", usersController.requestRefreshToken);
 router.get("/getallcustomers", midddlewareController.verifyToken,usersController.getAllCustomers);
 router.get("/getallusers", midddlewareController.verifyToken,usersController.getAllUsers);

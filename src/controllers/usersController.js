@@ -50,11 +50,11 @@ const usersController = {
       },
       process.env.JWT_ACCESS_KEY,
       {
-        expiresIn: "30s",
+        expiresIn: "20s",
       }
     );
   },
-  generateRefershToken: (user) => {
+  generateRefreshToken: (user) => {
     return jwt.sign(
       {
         idNhanVien: user.idNhanVien,
@@ -95,9 +95,10 @@ const usersController = {
 
         // Gửi phản hồi thành công về client
         const accessToken = usersController.generateAccessToken(results[0]);
+        console.log("usertoken: ",accessToken);
         const refreshToken = usersController.generateRefreshToken(results[0]);
         refreshTokens.push(refreshToken);
-        res.cookie("refershToken", refreshToken, {
+        res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: false,
           path: "/",
@@ -111,17 +112,14 @@ const usersController = {
     }
   },
   logout: async (req,res) => {
-    res.clearCookie("refershToken");
-    refershTokens=refershTokens.filter(token =>token !== req.cookies.refreshToken);
+    res.clearCookie("refreshToken");
+    refreshTokens=refreshTokens.filter(token =>token !== req.cookies.refreshToken);
     res.status(200).json("logout thành công")
   },
   requestRefreshToken: async(req, res) =>{
     const refreshToken = req.cookies.refreshToken;
     if(!refreshToken)
         return res.status(401).json("chưa được xác thực");
-    if(!refreshTokens.includes(refreshToken)){
-        return res.status(403).json("Refersh token không hợp lệ");
-    }
     jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY,(err,user) => {
         if(err){
             console.log(err);
@@ -137,6 +135,7 @@ const usersController = {
           sameSite: "strict",
         });
         res.status(200).json({accessToken: newAccessToken});
+        console.log("refreshtokennew: " ,newRefreshToken);
     });
   },
 
