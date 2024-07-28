@@ -50,7 +50,7 @@ const usersController = {
       },
       process.env.JWT_ACCESS_KEY,
       {
-        expiresIn: "20s",
+        expiresIn: "60s",
       }
     );
   },

@@ -290,8 +290,52 @@ const customersController = {
   
       res.status(200).json({ success:false,message: "Cập nhật thông tin thành công." });
     });
-  }
+  },
+  getAddressCus: async (req, res) => {
+    const idUser = req.user.idUser;
+    if (!idUser) {
+      return res.status(400).json({ message: "Missing required field: idUser" });
+    }
+    
+    // Thay đổi bảng và cột nếu cần
+    const query = `SELECT diaChi FROM taikhoankh WHERE idUser = ?`;
+    connection.query(query, [idUser], (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+      
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      
+      res.json(results[0]); // Trả về thông tin địa chỉ
+    });
+  },
   
+  // Hàm sửa địa chỉ khách hàng
+  updateAddressCus: async (req, res) => {
+    const idUser = req.user.idUser;
+    const { newAddress } = req.body; // Chỉ cần địa chỉ mới để cập nhật
+  
+    if (!idUser || !newAddress) {
+      return res.status(400).json({ message: "Missing required fields: idUser or newAddress" });
+    }
+  
+    const updateQuery = `UPDATE taikhoankh SET diaChi = ? WHERE idUser = ?`;
+    connection.query(updateQuery, [newAddress, idUser], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Error updating address." });
+      }
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Address update failed. User not found." });
+      }
+  
+      res.status(200).json({ message: "Address updated successfully." });
+    });
+  },
+
 };
 
 module.exports = customersController;

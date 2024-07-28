@@ -6,19 +6,21 @@ const cartController = {
     try {
       if (!idUser) {
         throw new Error("Missing required field: idUser");
-        
       }
-  
+
       // Kiểm tra xem người dùng đã có đơn hàng với trạng thái unpaid chưa
-      const checkUnpaidOrderQuery = "SELECT * FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'";
+      const checkUnpaidOrderQuery =
+        "SELECT * FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'";
       connection.query(checkUnpaidOrderQuery, [idUser], (err, results) => {
         if (err) {
           throw err;
         }
-  
+
         if (results.length > 0) {
           // Người dùng đã có đơn hàng unpaid
-          res.status(400).json({ message: "Bạn đã có đơn hàng chưa thanh toán." });
+          res
+            .status(400)
+            .json({ message: "Bạn đã có đơn hàng chưa thanh toán." });
         } else {
           // Tạo đơn hàng mới nếu không có đơn hàng unpaid
           const insertCartQuery =
@@ -28,7 +30,9 @@ const cartController = {
               throw err;
             }
             const cart_id = result.insertId;
-            res.status(201).json({ message: "Tạo đơn hàng thành công", cart_id });
+            res
+              .status(201)
+              .json({ message: "Tạo đơn hàng thành công", cart_id });
           });
         }
       });
@@ -36,7 +40,7 @@ const cartController = {
       res.status(500).json({ message: error.message });
     }
   },
-  
+
   addToCart: (req, res) => {
     // Lấy thông tin idUser từ accessToken
     const idUser = req.user.idUser;
@@ -96,12 +100,10 @@ const cartController = {
                   }
                 );
 
-                res
-                  .status(200)
-                  .json({
-                    success: true,
-                    message: "Cập nhật giỏ hàng thành công",
-                  });
+                res.status(200).json({
+                  success: true,
+                  message: "Cập nhật giỏ hàng thành công",
+                });
               }
             );
           } else {
@@ -115,12 +117,10 @@ const cartController = {
               }
 
               if (results.length === 0) {
-                return res
-                  .status(404)
-                  .json({
-                    message:
-                      "Không tìm thấy đơn hàng chưa thanh toán cho người dùng này",
-                  });
+                return res.status(404).json({
+                  message:
+                    "Không tìm thấy đơn hàng chưa thanh toán cho người dùng này",
+                });
               }
 
               const idDonHang = results[0].idDonHang;
@@ -147,12 +147,10 @@ const cartController = {
                     }
                   );
 
-                  res
-                    .status(201)
-                    .json({
-                      success: true,
-                      message: "Thêm vào giỏ hàng thành công",
-                    });
+                  res.status(201).json({
+                    success: true,
+                    message: "Thêm vào giỏ hàng thành công",
+                  });
                 }
               );
             });
@@ -191,20 +189,20 @@ const cartController = {
       res.json(results);
     });
   },
-  getCart : (req, res)=> {
-    const idUser =req.user.idUser;
+  getCart: (req, res) => {
+    const idUser = req.user.idUser;
     console.log(idUser);
     if (!idUser) {
       return res
         .status(400)
         .json({ message: "Missing required field: idUser" });
     }
-    const query = `SELECT * FROM donhang WHERE idUser = ?`
+    const query = `SELECT * FROM donhang WHERE idUser = ?`;
     connection.query(query, [idUser], (err, results) => {
       if (err) {
         return res.status(500).json({ message: err.message });
       }
-      console.log("thanh cong")
+      console.log("thanh cong");
       res.json(results);
     });
   },
@@ -213,19 +211,19 @@ const cartController = {
     const { idDonHang } = req.params; // Extract idDonHang from the request body
     console.log("User ID:", idUser);
     console.log("Order ID:", idDonHang);
-  
+
     if (!idUser) {
       return res
         .status(400)
         .json({ message: "Missing required field: idUser" });
     }
-  
+
     if (!idDonHang) {
       return res
         .status(400)
         .json({ message: "Missing required field: idDonHang" });
     }
-  
+
     const query = `
         SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
                p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
@@ -235,12 +233,12 @@ const cartController = {
         JOIN donhang c ON dc.idDonHang = c.idDonHang
         WHERE c.idUser = ? AND dc.idDonHang = ? 
     `;
-  
+
     connection.query(query, [idUser, idDonHang], (err, results) => {
       if (err) {
         return res.status(500).json({ message: err.message });
       }
-  
+
       res.json(results);
     });
   },
@@ -356,12 +354,10 @@ const cartController = {
                 }
               );
 
-              res
-                .status(200)
-                .json({
-                  success: true,
-                  message: "Cart item quantity updated successfully",
-                });
+              res.status(200).json({
+                success: true,
+                message: "Cart item quantity updated successfully",
+              });
             }
           );
         }
@@ -421,12 +417,10 @@ const cartController = {
                 }
               );
 
-              res
-                .status(200)
-                .json({
-                  success: true,
-                  message: "Cart item deleted successfully",
-                });
+              res.status(200).json({
+                success: true,
+                message: "Cart item deleted successfully",
+              });
             }
           );
         }
@@ -434,6 +428,45 @@ const cartController = {
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
+  },
+  payCOD: (req, res) => {
+    const idUser = req.user.idUser;
+    const { idDonHang } = req.body;
+
+    if (!idUser || !idDonHang) {
+      return res.status(400).json({ message: "Missing required fields: idUser, idDonHang" });
+    }
+
+    // Kiểm tra xem đơn hàng có thuộc về người dùng và có trạng thái 'unpaid' không
+    const checkOrderQuery = `
+      SELECT * FROM donhang
+      WHERE idDonHang = ? AND idUser = ? AND trangThai = 'unpaid'
+    `;
+    
+    connection.query(checkOrderQuery, [idDonHang, idUser], (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Order not found or not valid for the user" });
+      }
+
+      // Cập nhật trạng thái đơn hàng thành 'waiting'
+      const updateOrderQuery = `
+        UPDATE donhang
+        SET trangThai = 'waiting'
+        WHERE idDonHang = ?
+      `;
+      
+      connection.query(updateOrderQuery, [idDonHang], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: err.message });
+        }
+
+        res.status(200).json({ message: "Order status updated to waiting" });
+      });
+    });
   },
 };
 module.exports = cartController;
