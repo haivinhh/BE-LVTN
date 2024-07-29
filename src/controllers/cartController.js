@@ -1,166 +1,111 @@
 const connection = require("../models/db");
 const cartController = {
-  createOrder: (req, res) => {
+  // Function to create an order if the user doesn't already have an unpaid order
+  createOrUpdateCart: (req, res) => {
     const idUser = req.user.idUser;
-    console.log(idUser);
-    try {
-      if (!idUser) {
-        throw new Error("Missing required field: idUser");
+    const { idSanPham, soLuong } = req.body;
+
+    if (!idUser) {
+      return res.status(400).json({ message: "Missing required field: idUser" });
+    }
+    if (!idSanPham || !soLuong) {
+      return res.status(400).json({ message: "Missing required fields: idSanPham, soLuong" });
+    }
+
+    // Check if the user has any unpaid orders
+    const checkUnpaidOrderQuery = `
+      SELECT idDonHang FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'
+    `;
+    
+    connection.query(checkUnpaidOrderQuery, [idUser], (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
       }
 
-      // Kiểm tra xem người dùng đã có đơn hàng với trạng thái unpaid chưa
-      const checkUnpaidOrderQuery =
-        "SELECT * FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'";
-      connection.query(checkUnpaidOrderQuery, [idUser], (err, results) => {
+      let idDonHang;
+
+      if (results.length > 0) {
+        // User already has an unpaid order
+        idDonHang = results[0].idDonHang;
+      } else {
+        // User does not have an unpaid order, create a new one
+        const insertOrderQuery = `
+          INSERT INTO donhang (idUser, trangThai, ngayDatHang) VALUES (?, 'unpaid', NOW())
+        `;
+        
+        connection.query(insertOrderQuery, [idUser], (err, result) => {
+          if (err) {
+            return res.status(500).json({ message: err.message });
+          }
+          idDonHang = result.insertId;
+
+          // Add the item to the newly created order
+          addItemToCart(idDonHang, idSanPham, soLuong);
+        });
+        return;
+      }
+
+      // Add the item to the existing unpaid order
+      addItemToCart(idDonHang, idSanPham, soLuong);
+    });
+
+    function addItemToCart(idDonHang, idSanPham, soLuong) {
+      // Check if the product is already in the cart
+      const checkCartItemQuery = `
+        SELECT * FROM chitietdonhang
+        WHERE idDonHang = ? AND idSanPham = ?
+      `;
+      
+      connection.query(checkCartItemQuery, [idDonHang, idSanPham], (err, results) => {
         if (err) {
-          throw err;
+          return res.status(500).json({ message: err.message });
         }
 
         if (results.length > 0) {
-          // Người dùng đã có đơn hàng unpaid
-          res
-            .status(400)
-            .json({ message: "Bạn đã có đơn hàng chưa thanh toán." });
-        } else {
-          // Tạo đơn hàng mới nếu không có đơn hàng unpaid
-          const insertCartQuery =
-            "INSERT INTO donhang (idUser, trangThai, ngayDatHang) VALUES (?, 'unpaid', NOW())";
-          connection.query(insertCartQuery, [idUser], (err, result) => {
-            if (err) {
-              throw err;
-            }
-            const cart_id = result.insertId;
-            res
-              .status(201)
-              .json({ message: "Tạo đơn hàng thành công", cart_id });
-          });
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
+          // Product already exists in the cart, update the quantity
+          const existingCartItem = results[0];
+          const newQuantity = existingCartItem.soLuong + parseInt(soLuong);
 
-  addToCart: (req, res) => {
-    // Lấy thông tin idUser từ accessToken
-    const idUser = req.user.idUser;
-    console.log("idUser: ", idUser);
-
-    try {
-      if (!idUser) {
-        throw new Error("Missing required field: idUser");
-      }
-
-      const { idSanPham, soLuong } = req.body;
-
-      if (!idSanPham || !soLuong) {
-        throw new Error("Missing required fields: idSanPham, soLuong");
-      }
-
-      // Query để kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
-      const checkCartItemQuery = `
-        SELECT * FROM chitietdonhang
-        WHERE idDonHang IN (
-          SELECT idDonHang FROM donhang
-          WHERE idUser = ? AND trangThai = 'unpaid'
-        ) AND idSanPham = ?
-      `;
-      connection.query(
-        checkCartItemQuery,
-        [idUser, idSanPham],
-        (err, results) => {
-          if (err) {
-            throw err;
-          }
-
-          if (results.length > 0) {
-            // Nếu sản phẩm đã có trong giỏ hàng, cập nhật số lượng
-            const existingCartItem = results[0];
-            const newQuantity = existingCartItem.soLuong + parseInt(soLuong);
-
-            const updateCartItemQuery = `
+          const updateCartItemQuery = `
             UPDATE chitietdonhang
             SET soLuong = ?
             WHERE idChiTietDH = ?
           `;
-            connection.query(
-              updateCartItemQuery,
-              [newQuantity, existingCartItem.idChiTietDH],
-              (err, result) => {
-                if (err) {
-                  throw err;
-                }
+          connection.query(updateCartItemQuery, [newQuantity, existingCartItem.idChiTietDH], (err, result) => {
+            if (err) {
+              return res.status(500).json({ message: err.message });
+            }
 
-                // Sau khi cập nhật số lượng, cập nhật lại tổng tiền của đơn hàng và chi tiết đơn hàng
-                cartController.updateDetailCartTotal(
-                  existingCartItem.idDonHang,
-                  idSanPham,
-                  () => {
-                    cartController.updateCartTotal(existingCartItem.idDonHang);
-                  }
-                );
-
-                res.status(200).json({
-                  success: true,
-                  message: "Cập nhật giỏ hàng thành công",
-                });
-              }
-            );
-          } else {
-            // Nếu sản phẩm chưa có trong giỏ hàng, thêm mới
-            const getUnpaidOrderQuery = `
-            SELECT idDonHang FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'
-          `;
-            connection.query(getUnpaidOrderQuery, [idUser], (err, results) => {
-              if (err) {
-                throw err;
-              }
-
-              if (results.length === 0) {
-                return res.status(404).json({
-                  message:
-                    "Không tìm thấy đơn hàng chưa thanh toán cho người dùng này",
-                });
-              }
-
-              const idDonHang = results[0].idDonHang;
-
-              // Query để thêm chi tiết đơn hàng mới
-              const insertDetailCartQuery = `
-              INSERT INTO chitietdonhang (idDonHang, idSanPham, soLuong)
-              VALUES (?, ?, ?)
-            `;
-              connection.query(
-                insertDetailCartQuery,
-                [idDonHang, idSanPham, soLuong],
-                (err, result) => {
-                  if (err) {
-                    throw err;
-                  }
-
-                  // Sau khi thêm mới, cập nhật lại tổng tiền của đơn hàng và chi tiết đơn hàng
-                  cartController.updateDetailCartTotal(
-                    idDonHang,
-                    idSanPham,
-                    () => {
-                      cartController.updateCartTotal(idDonHang);
-                    }
-                  );
-
-                  res.status(201).json({
-                    success: true,
-                    message: "Thêm vào giỏ hàng thành công",
-                  });
-                }
-              );
+            // Update cart totals
+            cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
+              cartController.updateCartTotal(idDonHang);
             });
-          }
+
+            res.status(200).json({ success: true, message: "Cart updated successfully" });
+          });
+        } else {
+          // Product does not exist in the cart, add it
+          const insertDetailCartQuery = `
+            INSERT INTO chitietdonhang (idDonHang, idSanPham, soLuong)
+            VALUES (?, ?, ?)
+          `;
+          connection.query(insertDetailCartQuery, [idDonHang, idSanPham, soLuong], (err, result) => {
+            if (err) {
+              return res.status(500).json({ message: err.message });
+            }
+
+            // Update cart totals
+            cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
+              cartController.updateCartTotal(idDonHang);
+            });
+
+            res.status(201).json({ success: true, message: "Item added to cart successfully" });
+          });
         }
-      );
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      });
     }
   },
+
 
   getDetailCart: (req, res) => {
     const idUser = req.user.idUser;

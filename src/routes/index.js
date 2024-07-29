@@ -61,8 +61,8 @@ router.post("/dvvc/add", middlewareController.verifyTokenAndIsEmployee,shipContr
 router.put("/dvvc/put/:idDonViVanChuyen",middlewareController.verifyTokenAndIsEmployee,shipController.updateDVVC);
 
 //giohang
-router.post("/cart/add", midddlewareController.verifyToken,cartController.addToCart);
-router.post("/cart/createorder", midddlewareController.verifyToken,cartController.createOrder);
+router.post("/cart/add", midddlewareController.verifyToken,cartController.createOrUpdateCart);
+//router.post("/cart/createorder", midddlewareController.verifyToken,cartController.createOrder);
 router.get("/detailcart", midddlewareController.verifyToken,cartController.getDetailCart);
 router.get("/cart", midddlewareController.verifyToken,cartController.getCart);
 router.get("/getdetailcart/:idDonHang", midddlewareController.verifyToken,cartController.getDetailCartOfUser);
