@@ -193,18 +193,40 @@ const orderController = {
     }
 
     try {
-      const query =
+      // Update order status
+      const updateOrderQuery =
         "UPDATE donhang SET trangThai = 'delivery', idDonViVanChuyen = ?, idNhanVien = ? WHERE idDonHang = ?";
-      const results = await executeQuery(query, [
+      const updateOrderResult = await executeQuery(updateOrderQuery, [
         idDonViVanChuyen,
         idNhanVien,
         idDonHang,
       ]);
 
-      if (results.affectedRows === 0) {
+      if (updateOrderResult.affectedRows === 0) {
         return res.status(404).json({ message: "Order not found" });
       }
 
+      // Get order details for updating product quantities
+      const orderDetailsQuery = `
+        SELECT dc.idChiTietDH, dc.idSanPham, dc.soLuong
+        FROM chitietdonhang dc
+        WHERE dc.idDonHang = ?
+      `;
+      const orderDetails = await executeQuery(orderDetailsQuery, [idDonHang]);
+
+      // Update product quantities
+      const updateProductQueries = orderDetails.map((item) => {
+        return {
+          sql: 'UPDATE sanpham SET soLuong = soLuong - ? WHERE idSanPham = ?',
+          params: [item.soLuong, item.idSanPham],
+        };
+      });
+
+      for (const query of updateProductQueries) {
+        await executeQuery(query.sql, query.params);
+      }
+
+      // Get order details for email
       const orderResults = await getOrderDetailsForEmail(idDonHang);
       if (orderResults.length === 0) {
         return res.status(404).json({ message: "Order not found" });
@@ -212,6 +234,8 @@ const orderController = {
 
       const order = orderResults[0];
       order.items = orderResults;
+
+      // Send order email
       await sendOrderEmail(
         order,
         idDonHang,
