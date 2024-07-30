@@ -6,17 +6,21 @@ const cartController = {
     const { idSanPham, soLuong } = req.body;
 
     if (!idUser) {
-      return res.status(400).json({ message: "Missing required field: idUser" });
+      return res
+        .status(400)
+        .json({ message: "Missing required field: idUser" });
     }
     if (!idSanPham || !soLuong) {
-      return res.status(400).json({ message: "Missing required fields: idSanPham, soLuong" });
+      return res
+        .status(400)
+        .json({ message: "Missing required fields: idSanPham, soLuong" });
     }
 
     // Check if the user has any unpaid orders
     const checkUnpaidOrderQuery = `
       SELECT idDonHang FROM donhang WHERE idUser = ? AND trangThai = 'unpaid'
     `;
-    
+
     connection.query(checkUnpaidOrderQuery, [idUser], (err, results) => {
       if (err) {
         return res.status(500).json({ message: err.message });
@@ -32,7 +36,7 @@ const cartController = {
         const insertOrderQuery = `
           INSERT INTO donhang (idUser, trangThai, ngayDatHang) VALUES (?, 'unpaid', NOW())
         `;
-        
+
         connection.query(insertOrderQuery, [idUser], (err, result) => {
           if (err) {
             return res.status(500).json({ message: err.message });
@@ -55,57 +59,86 @@ const cartController = {
         SELECT * FROM chitietdonhang
         WHERE idDonHang = ? AND idSanPham = ?
       `;
-      
-      connection.query(checkCartItemQuery, [idDonHang, idSanPham], (err, results) => {
-        if (err) {
-          return res.status(500).json({ message: err.message });
-        }
 
-        if (results.length > 0) {
-          // Product already exists in the cart, update the quantity
-          const existingCartItem = results[0];
-          const newQuantity = existingCartItem.soLuong + parseInt(soLuong);
+      connection.query(
+        checkCartItemQuery,
+        [idDonHang, idSanPham],
+        (err, results) => {
+          if (err) {
+            return res.status(500).json({ message: err.message });
+          }
 
-          const updateCartItemQuery = `
+          if (results.length > 0) {
+            // Product already exists in the cart, update the quantity
+            const existingCartItem = results[0];
+            const newQuantity = existingCartItem.soLuong + parseInt(soLuong);
+
+            const updateCartItemQuery = `
             UPDATE chitietdonhang
             SET soLuong = ?
             WHERE idChiTietDH = ?
           `;
-          connection.query(updateCartItemQuery, [newQuantity, existingCartItem.idChiTietDH], (err, result) => {
-            if (err) {
-              return res.status(500).json({ message: err.message });
-            }
+            connection.query(
+              updateCartItemQuery,
+              [newQuantity, existingCartItem.idChiTietDH],
+              (err, result) => {
+                if (err) {
+                  return res.status(500).json({ message: err.message });
+                }
 
-            // Update cart totals
-            cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
-              cartController.updateCartTotal(idDonHang);
-            });
+                // Update cart totals
+                cartController.updateDetailCartTotal(
+                  idDonHang,
+                  idSanPham,
+                  () => {
+                    cartController.updateCartTotal(idDonHang);
+                  }
+                );
 
-            res.status(200).json({ success: true, message: "Cart updated successfully" });
-          });
-        } else {
-          // Product does not exist in the cart, add it
-          const insertDetailCartQuery = `
+                res
+                  .status(200)
+                  .json({
+                    success: true,
+                    message: "Cart updated successfully",
+                  });
+              }
+            );
+          } else {
+            // Product does not exist in the cart, add it
+            const insertDetailCartQuery = `
             INSERT INTO chitietdonhang (idDonHang, idSanPham, soLuong)
             VALUES (?, ?, ?)
           `;
-          connection.query(insertDetailCartQuery, [idDonHang, idSanPham, soLuong], (err, result) => {
-            if (err) {
-              return res.status(500).json({ message: err.message });
-            }
+            connection.query(
+              insertDetailCartQuery,
+              [idDonHang, idSanPham, soLuong],
+              (err, result) => {
+                if (err) {
+                  return res.status(500).json({ message: err.message });
+                }
 
-            // Update cart totals
-            cartController.updateDetailCartTotal(idDonHang, idSanPham, () => {
-              cartController.updateCartTotal(idDonHang);
-            });
+                // Update cart totals
+                cartController.updateDetailCartTotal(
+                  idDonHang,
+                  idSanPham,
+                  () => {
+                    cartController.updateCartTotal(idDonHang);
+                  }
+                );
 
-            res.status(201).json({ success: true, message: "Item added to cart successfully" });
-          });
+                res
+                  .status(201)
+                  .json({
+                    success: true,
+                    message: "Item added to cart successfully",
+                  });
+              }
+            );
+          }
         }
-      });
+      );
     }
   },
-
 
   getDetailCart: (req, res) => {
     const idUser = req.user.idUser;
@@ -376,41 +409,88 @@ const cartController = {
   },
   payCOD: (req, res) => {
     const idUser = req.user.idUser;
-    const { idDonHang } = req.body;
+    const { idDonHang, recipientName, recipientPhone, recipientAddress } =
+      req.body;
 
-    if (!idUser || !idDonHang) {
-      return res.status(400).json({ message: "Missing required fields: idUser, idDonHang" });
+    console.log("id user cart : ", idUser);
+
+    if (
+      !idUser ||
+      !idDonHang ||
+      !recipientName ||
+      !recipientPhone ||
+      !recipientAddress
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Missing required fields: idDonHang, recipientName, recipientPhone, recipientAddress",
+        });
     }
 
-    // Kiểm tra xem đơn hàng có thuộc về người dùng và có trạng thái 'unpaid' không
+    // Check if the order belongs to the user and is in 'unpaid' status
     const checkOrderQuery = `
       SELECT * FROM donhang
       WHERE idDonHang = ? AND idUser = ? AND trangThai = 'unpaid'
     `;
-    
+
     connection.query(checkOrderQuery, [idDonHang, idUser], (err, results) => {
       if (err) {
-        return res.status(500).json({ message: err.message });
+        console.error("Database query error:", err);
+        return res
+          .status(500)
+          .json({ message: "Internal server error while checking the order." });
       }
 
       if (results.length === 0) {
-        return res.status(404).json({ message: "Order not found or not valid for the user" });
+        return res
+          .status(404)
+          .json({ message: "Order not found or not valid for the user" });
       }
 
-      // Cập nhật trạng thái đơn hàng thành 'waiting'
+      // Update order status to 'waiting' and add recipient details
       const updateOrderQuery = `
-        UPDATE donhang
-        SET trangThai = 'waiting'
-        WHERE idDonHang = ?
-      `;
-      
-      connection.query(updateOrderQuery, [idDonHang], (err, result) => {
-        if (err) {
-          return res.status(500).json({ message: err.message });
-        }
+  UPDATE donhang
+  SET trangThai = 'waiting',
+      tenNguoiNhan = ?, 
+      SDT = ?, 
+      diaChi = ?, 
+      phuongThucTT = 'COD'
+  WHERE idDonHang = ?
+`;
 
-        res.status(200).json({ message: "Order status updated to waiting" });
-      });
+      connection.query(
+        updateOrderQuery,
+        [recipientName, recipientPhone, recipientAddress, idDonHang],
+        (err, result) => {
+          if (err) {
+            console.error("Database query error:", err);
+            return res
+              .status(500)
+              .json({
+                message: "Internal server error while updating the order.",
+              });
+          }
+
+          // Optionally, you can check if any rows were affected
+          if (result.affectedRows === 0) {
+            return res
+              .status(404)
+              .json({
+                message:
+                  "Failed to update the order. It might have been already processed.",
+              });
+          }
+
+          res
+            .status(200)
+            .json({
+              message:
+                "Order status updated to waiting with recipient details and payment method set to COD",
+            });
+        }
+      );
     });
   },
 };

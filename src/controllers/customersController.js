@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 let refreshTokenCuss = [];
 const customersController = {
   cusregister : async (req, res) => {
-    const { userName, passWord, SDT, email, diaChi, hoTen } = req.body;
+    const { userName, passWord, SDT, email, hoTen } = req.body;
   
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,7 +39,6 @@ const customersController = {
             passWord: hashedPassword,
             SDT,
             email,
-            diaChi,
             hoTen,
           };
   
@@ -233,7 +232,7 @@ const customersController = {
 
   },
   updateUser: async (req, res) => {
-    const { hoTen, SDT, email, diaChi } = req.body;
+    const { hoTen, SDT, email } = req.body;
     const idUser = req.user.idUser; // Lấy idUser từ token
   
     if (!idUser) {
@@ -268,10 +267,6 @@ const customersController = {
       values.push(email);
     }
   
-    if (diaChi) {
-      fieldsToUpdate.push("diaChi = ?");
-      values.push(diaChi);
-    }
   
     if (fieldsToUpdate.length === 0) {
       console.log("Không có trường nào được cung cấp để cập nhật");

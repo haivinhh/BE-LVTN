@@ -99,6 +99,11 @@ router.delete("/deleteuser", midddlewareController.verifyTokenAndIsAdmin,usersCo
 router.get("/detailcart/:idDonHang", midddlewareController.verifyTokenAndIsEmployee,orderController.getDetailCart);
 router.get("/getallcart", midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCart);
 router.get("/getcusbyid/:idUser", midddlewareController.verifyTokenAndIsEmployee,orderController.getCusbyId);
+router.get("/getallcartwaiting",midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCartWaiting);
+router.post("/confirmorder",midddlewareController.verifyTokenAndIsEmployee,orderController.confirmOrder);
+router.get("/getallcartdelivery",midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCartDelivery);
+router.post("/confirmdone",midddlewareController.verifyTokenAndIsEmployee,orderController.confirmDelivery);
+router.get("/getallcartdone", midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCartDone);
 
 
 
