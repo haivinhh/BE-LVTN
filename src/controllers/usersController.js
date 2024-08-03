@@ -185,20 +185,7 @@ const usersController = {
       res.status(200).json({ message: "Xóa nhân viên thành công." });
     });
   },
-  getAllCustomers: (req, res) => {
-    const query = "SELECT * FROM taikhoankh";
-
-    connection.query(query, (error, results) => {
-      if (error) {
-        console.error(error);
-        return res
-          .status(500)
-          .json({ message: "Lỗi server khi lấy danh sách khách hàng." });
-      }
-
-      res.status(200).json(results);
-    });
-  },
+  
 
   deleteCustomer: (req, res) => {
     const { idUser } = req.body; // Lấy ID từ URL

@@ -12,6 +12,8 @@ const midddlewareController = require("../controllers/middlewareController");
 const middlewareController = require("../controllers/middlewareController");
 const shipController = require("../controllers/ShipController");
 const orderController = require("../controllers/orderController");
+const customersAccController = require("../controllers/customersAccController");
+
 
 //sanpham
 router.get("/sanpham", productController.getAllProducts);
@@ -83,6 +85,10 @@ router.put("/updateuser", midddlewareController.verifyToken, customersController
 router.get('/address', midddlewareController.verifyToken,customersController.getAddressCus);
 router.put('/address', midddlewareController.verifyToken,customersController.updateAddressCus);
 
+//qltaikhoankh
+router.get('/getallcustomers', midddlewareController.verifyTokenAndIsEmployee, customersAccController.getAllCustomers);
+router.get('/getcartbyiduser/:idUser',midddlewareController.verifyTokenAndIsEmployee, customersAccController.getOrdersByCustomerId);
+
 
 
 //taikhoannv
@@ -90,7 +96,6 @@ router.post("/register", usersController.register);
 router.post("/login", usersController.login);
 router.post("/logout", midddlewareController.verifyTokenAndIsEmployee,usersController.logout);
 router.post("/refreshtoken", usersController.requestRefreshToken);
-router.get("/getallcustomers", midddlewareController.verifyToken,usersController.getAllCustomers);
 router.get("/getallusers", midddlewareController.verifyToken,usersController.getAllUsers);
 router.delete("/deletecustomer", usersController.deleteUser);
 router.delete("/deleteuser", midddlewareController.verifyTokenAndIsAdmin,usersController.deleteUser);

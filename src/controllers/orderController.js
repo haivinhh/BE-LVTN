@@ -41,7 +41,7 @@ const getOrderDetailsForEmail = async (idDonHang) => {
 
 const sendOrderEmail = async (order, idDonHang, subject, message) => {
   const emailHTML = `
-    <p><b style="color: black;">Xin chào ${order.userName},</b></p>
+    <p><b style="color: black;">Xin chào ${order.tenNguoiNhan},</b></p>
     <p><b style="color: black;">${message}</b></p>
     <p><b style="color: black;">Thông tin đơn hàng:</b></p>
     <ul>

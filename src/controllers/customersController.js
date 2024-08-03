@@ -306,7 +306,6 @@ const customersController = {
       res.json(results[0]); // Trả về thông tin địa chỉ
     });
   },
-  
   // Hàm sửa địa chỉ khách hàng
   updateAddressCus: async (req, res) => {
     const idUser = req.user.idUser;
@@ -330,6 +329,7 @@ const customersController = {
       res.status(200).json({ message: "Address updated successfully." });
     });
   },
+  
 
 };
 
