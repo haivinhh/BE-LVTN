@@ -64,7 +64,7 @@ const usersController = {
       {
         expiresIn: "365d",
       }
-    );
+    );``
   },
   login: async (req, res) => {
     const { userName, passWord } = req.body;

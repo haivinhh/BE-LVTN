@@ -88,6 +88,10 @@ router.put('/address', midddlewareController.verifyToken,customersController.upd
 //qltaikhoankh
 router.get('/getallcustomers', midddlewareController.verifyTokenAndIsEmployee, customersAccController.getAllCustomers);
 router.get('/getcartbyiduser/:idUser',midddlewareController.verifyTokenAndIsEmployee, customersAccController.getOrdersByCustomerId);
+router.post("/customer/add", midddlewareController.verifyTokenAndIsEmployee,customersAccController.addCustomer);
+router.put("/customer/put", midddlewareController.verifyTokenAndIsEmployee, customersAccController.updateCustomer);
+router.delete('/customers/:idUser', midddlewareController.verifyTokenAndIsEmployee,customersAccController.deleteCustomer);
+router.put('/customer/changepassword', midddlewareController.verifyTokenAndIsEmployee,customersAccController.changePassword);
 
 
 
