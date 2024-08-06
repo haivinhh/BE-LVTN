@@ -18,26 +18,25 @@ const middlewareController = {
     }
   },
   verifyTokenAndIsAdmin: (req, res, next) => {
-    // Gọi hàm verifyToken để xác thực token trước
     middlewareController.verifyToken(req, res, () => {
-      // Kiểm tra nếu người dùng không phải admin
-      if (!req.user || !req.user.admin) {
-        return res.status(403).json({ message: "Bạn không có quyền truy cập." });
-        
+      if (req.user && req.user.admin) {
+        next(); // Nếu là admin, cho phép tiếp tục vào route kế tiếp
+      } else {
+        return res.status(400).json({ message: "Vai trò của bạn không thể thực hiện chức năng này" });
       }
-      console.log(req.user.admin)
-      next(); // Nếu là admin, cho phép tiếp tục vào route kế tiếp
     });
   },
   verifyTokenAndIsEmployee: (req, res, next) => {
     middlewareController.verifyToken(req, res, () => {
-      if (!req.user || req.user.admin !== 0) {
-        return res.status(403).json({ message: "Bạn không phải là nhân viên." });
+      if (req.user && req.user.admin) {
+        next(); // Nếu là admin, cho phép tiếp tục vào route kế tiếp
+      } else if (req.user && req.user.admin === 0) {
+        next(); // Nếu là nhân viên, cho phép tiếp tục vào route kế tiếp
+      } else {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập." });
       }
-      next(); // Nếu là nhân viên, cho phép tiếp tục vào route kế tiếp
     });
   }
-
 };
 
 module.exports = middlewareController;

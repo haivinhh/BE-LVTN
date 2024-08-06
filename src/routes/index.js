@@ -42,7 +42,7 @@ router.delete("/danhmucspql/del/:idDanhMuc", midddlewareController.verifyTokenAn
 
 //dongdt
 router.get("/dongdt", dongDTController.getAlldongDT);
-
+//qldongdt
 router.get("/dongdtql", midddlewareController.verifyTokenAndIsEmployee,dongDTController.getAlldongDT);
 router.post('/dongdtql/add', midddlewareController.verifyTokenAndIsEmployee,dongDTController.addDongDT);
 router.put('/dongdtql/put/:idDongDT', midddlewareController.verifyTokenAndIsEmployee,dongDTController.updateDongDT);
@@ -90,7 +90,7 @@ router.get('/getallcustomers', midddlewareController.verifyTokenAndIsEmployee, c
 router.get('/getcartbyiduser/:idUser',midddlewareController.verifyTokenAndIsEmployee, customersAccController.getOrdersByCustomerId);
 router.post("/customer/add", midddlewareController.verifyTokenAndIsEmployee,customersAccController.addCustomer);
 router.put('/customer/put/:idUser', midddlewareController.verifyTokenAndIsEmployee, customersAccController.updateCustomer);
-router.delete('/customer/del/:idUser', midddlewareController.verifyTokenAndIsEmployee,customersAccController.deleteCustomer);
+router.delete('/customer/del/:idUser', middlewareController.verifyTokenAndIsAdmin,customersAccController.deleteCustomer);
 router.put('/customer/changepassword', midddlewareController.verifyTokenAndIsEmployee,customersAccController.changePassword);
 
 
@@ -103,6 +103,9 @@ router.post("/refreshtoken", usersController.requestRefreshToken);
 router.get("/getallusers", midddlewareController.verifyToken,usersController.getAllUsers);
 router.delete("/deletecustomer", usersController.deleteUser);
 router.delete("/deleteuser", midddlewareController.verifyTokenAndIsAdmin,usersController.deleteUser);
+router.get("/getuserbyid", midddlewareController.verifyTokenAndIsEmployee,usersController.getUserById);
+router.get("/confirmorderbyuser", midddlewareController.verifyTokenAndIsEmployee,usersController.getConfirmedOrdersByEmployee)
+router.put("/user/put",midddlewareController.verifyTokenAndIsEmployee,usersController.updateUser);
 
 //qldonhang
 router.get("/detailcart/:idDonHang", midddlewareController.verifyTokenAndIsEmployee,orderController.getDetailCart);

@@ -138,7 +138,6 @@ const usersController = {
         console.log("refreshtokennew: " ,newRefreshToken);
     });
   },
-
   getAllUsers: (req, res) => {
     const query = "SELECT * FROM tknhanvien";
 
@@ -153,7 +152,6 @@ const usersController = {
       res.status(200).json(results);
     });
   },
-
   deleteUser: (req, res) => {
     const { idNhanVien } = req.body; // Get ID from URL
 
@@ -185,8 +183,6 @@ const usersController = {
       res.status(200).json({ message: "Xóa nhân viên thành công." });
     });
   },
-  
-
   deleteCustomer: (req, res) => {
     const { idUser } = req.body; // Lấy ID từ URL
 
@@ -233,6 +229,227 @@ const usersController = {
       });
     });
   },
+  getUserById: (req, res) => {
+    const idNhanVien  = req.user.idNhanVien; // Get ID from URL parameters
+
+    const query = "SELECT * FROM tknhanvien WHERE idNhanVien = ?";
+
+    connection.query(query, [idNhanVien], (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Lỗi server khi lấy thông tin nhân viên." });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Không tìm thấy nhân viên." });
+      }
+
+      res.status(200).json(results[0]);
+    });
+  },
+  updateUser: (req, res) => {
+    const idNhanVien = req.user.idNhanVien;
+    const { userName, passWord, SDT, email, diaChi, hoTen } = req.body;
+
+    let updates = [];
+    let values = [];
+
+    // Validate userName uniqueness
+    if (userName) {
+      const query = "SELECT * FROM tknhanvien WHERE userName = ? AND idNhanVien != ?";
+      connection.query(query, [userName, idNhanVien], (error, results) => {
+        if (error) {
+          console.error(error);
+          return res.status(500).json({ message: "Lỗi server khi kiểm tra tính duy nhất của userName." });
+        }
+        if (results.length > 0) {
+          return res.status(400).json({ message: "Tên đăng nhập đã tồn tại." });
+        } else {
+          updates.push("userName = ?");
+          values.push(userName);
+        }
+      });
+    }
+
+    // Validate email format
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Địa chỉ email không hợp lệ" });
+      } else {
+        updates.push("email = ?");
+        values.push(email);
+      }
+    }
+
+    // Validate phone number format
+    if (SDT) {
+      const phoneRegex = /^\d+$/;
+      if (!phoneRegex.test(SDT)) {
+        return res.status(400).json({ message: "Số điện thoại không hợp lệ" });
+      } else {
+        updates.push("SDT = ?");
+        values.push(SDT);
+      }
+    }
+
+    // Validate and hash password
+    if (passWord) {
+      const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+      if (!passwordRegex.test(passWord)) {
+        return res.status(400).json({ message: "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự." });
+      } else {
+        bcrypt.genSalt(10, (err, salt) => {
+          if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+
+          bcrypt.hash(passWord, salt, (err, hashedPassword) => {
+            if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+
+            updates.push("passWord = ?");
+            values.push(hashedPassword);
+            updateDatabase();
+          });
+        });
+        return;
+      }
+    }
+
+    if (diaChi) {
+      updates.push("diaChi = ?");
+      values.push(diaChi);
+    }
+    if (hoTen) {
+      updates.push("hoTen = ?");
+      values.push(hoTen);
+    }
+
+    if (updates.length > 0) {
+      updateDatabase();
+    } else {
+      res.status(400).json({ message: "Không có thông tin để cập nhật." });
+    }
+
+    function updateDatabase() {
+      values.push(idNhanVien);
+      const query = `UPDATE tknhanvien SET ${updates.join(", ")} WHERE idNhanVien = ?`;
+
+      connection.query(query, values, (error, result) => {
+        if (error) {
+          console.error(error);
+          return res.status(500).json({ message: "Lỗi server khi cập nhật thông tin nhân viên." });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ message: "Không tìm thấy nhân viên để cập nhật." });
+        }
+
+        res.status(200).json({ message: "Cập nhật thông tin nhân viên thành công." });
+      });
+    }
+  },
+  getConfirmedOrdersByEmployee: (req, res) => {
+    const idNhanVien = req.user.idNhanVien; // Get the employee ID from the request (assumes authentication middleware is in place)
+
+    const query = "SELECT * FROM donHang WHERE idNhanVien = ?";
+
+    connection.query(query, [idNhanVien], (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Lỗi server khi lấy đơn hàng đã xác nhận." });
+      }
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Không tìm thấy đơn hàng đã xác nhận bởi nhân viên này." });
+      }
+      res.status(200).json(results);
+    });
+  },
+  addUser: (req, res) => {
+    const { userName, passWord, SDT, email, diaChi, hoTen, isAdmin } = req.body;
+
+    // Validate input fields
+    if (!userName || !passWord || !SDT || !email || !diaChi || !hoTen) {
+      return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin." });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Địa chỉ email không hợp lệ" });
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^\d+$/;
+    if (!phoneRegex.test(SDT)) {
+      return res.status(400).json({ message: "Số điện thoại không hợp lệ" });
+    }
+
+    // Validate and hash password
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+    if (!passwordRegex.test(passWord)) {
+      return res.status(400).json({ message: "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự." });
+    }
+
+    // Check for userName and email uniqueness
+    const checkUniqueQuery = "SELECT * FROM tknhanvien WHERE userName = ? OR email = ?";
+    connection.query(checkUniqueQuery, [userName, email], (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Lỗi server khi kiểm tra tính duy nhất." });
+      }
+
+      if (results.length > 0) {
+        return res.status(400).json({ message: "Tên đăng nhập hoặc email đã tồn tại." });
+      }
+
+      // Hash the password
+      bcrypt.genSalt(10, (err, salt) => {
+        if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+
+        bcrypt.hash(passWord, salt, (err, hashedPassword) => {
+          if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+
+          // Insert new user into the database
+          const insertQuery = "INSERT INTO tknhanvien (userName, passWord, SDT, email, diaChi, hoTen, isAdmin) VALUES (?, ?, ?, ?, ?, ?, ?)";
+          connection.query(insertQuery, [userName, hashedPassword, SDT, email, diaChi, hoTen, isAdmin], (error, results) => {
+            if (error) {
+              console.error(error);
+              return res.status(500).json({ message: "Lỗi server khi thêm nhân viên." });
+            }
+
+            res.status(201).json({ message: "Thêm nhân viên thành công." });
+          });
+        });
+      });
+    });
+  },
+
+  deleteUser: (req, res) => {
+    const { idNhanVien } = req.params;
+
+    // Check if the user exists
+    const checkUserQuery = "SELECT * FROM tknhanvien WHERE idNhanVien = ?";
+    connection.query(checkUserQuery, [idNhanVien], (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Lỗi server khi kiểm tra nhân viên." });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Không tìm thấy nhân viên." });
+      }
+
+      // Delete the user
+      const deleteQuery = "DELETE FROM tknhanvien WHERE idNhanVien = ?";
+      connection.query(deleteQuery, [idNhanVien], (error, results) => {
+        if (error) {
+          console.error(error);
+          return res.status(500).json({ message: "Lỗi server khi xóa nhân viên." });
+        }
+
+        res.status(200).json({ message: "Xóa nhân viên thành công." });
+      });
+    });
+  }
 };
 
 module.exports = usersController;
