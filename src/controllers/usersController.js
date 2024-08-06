@@ -46,7 +46,7 @@ const usersController = {
     return jwt.sign(
       {
         idNhanVien: user.idNhanVien,
-        admin: user.admin 
+        admin: user.admin,
       },
       process.env.JWT_ACCESS_KEY,
       {
@@ -58,13 +58,14 @@ const usersController = {
     return jwt.sign(
       {
         idNhanVien: user.idNhanVien,
-        admin: user.admin 
+        admin: user.admin,
       },
       process.env.JWT_REFRESH_KEY,
       {
         expiresIn: "365d",
       }
-    );``
+    );
+    ``;
   },
   login: async (req, res) => {
     const { userName, passWord } = req.body;
@@ -95,7 +96,7 @@ const usersController = {
 
         // Gửi phản hồi thành công về client
         const accessToken = usersController.generateAccessToken(results[0]);
-        console.log("usertoken: ",accessToken);
+        console.log("usertoken: ", accessToken);
         const refreshToken = usersController.generateRefreshToken(results[0]);
         refreshTokens.push(refreshToken);
         res.cookie("refreshToken", refreshToken, {
@@ -111,31 +112,32 @@ const usersController = {
       res.status(500).json({ message: "Lỗi server khi đăng nhập." });
     }
   },
-  logout: async (req,res) => {
+  logout: async (req, res) => {
     res.clearCookie("refreshToken");
-    refreshTokens=refreshTokens.filter(token =>token !== req.cookies.refreshToken);
-    res.status(200).json("logout thành công")
+    refreshTokens = refreshTokens.filter(
+      (token) => token !== req.cookies.refreshToken
+    );
+    res.status(200).json("logout thành công");
   },
-  requestRefreshToken: async(req, res) =>{
+  requestRefreshToken: async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
-    if(!refreshToken)
-        return res.status(401).json("chưa được xác thực");
-    jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY,(err,user) => {
-        if(err){
-            console.log(err);
-        }
-        refreshTokens = refreshTokens.filter((token)=>token !== refreshToken)
-        const newAccessToken = usersController.generateAccessToken(user);
-        const newRefreshToken = usersController.generateRefreshToken(user);
-        refreshTokens.push(newRefreshToken);
-        res.cookie("refreshToken", newRefreshToken,{
-            httpOnly: true,
-          secure: false,
-          path: "/",
-          sameSite: "strict",
-        });
-        res.status(200).json({accessToken: newAccessToken});
-        console.log("refreshtokennew: " ,newRefreshToken);
+    if (!refreshToken) return res.status(401).json("chưa được xác thực");
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
+      if (err) {
+        console.log(err);
+      }
+      refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+      const newAccessToken = usersController.generateAccessToken(user);
+      const newRefreshToken = usersController.generateRefreshToken(user);
+      refreshTokens.push(newRefreshToken);
+      res.cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: false,
+        path: "/",
+        sameSite: "strict",
+      });
+      res.status(200).json({ accessToken: newAccessToken });
+      console.log("refreshtokennew: ", newRefreshToken);
     });
   },
   getAllUsers: (req, res) => {
@@ -230,14 +232,16 @@ const usersController = {
     });
   },
   getUserById: (req, res) => {
-    const idNhanVien  = req.user.idNhanVien; // Get ID from URL parameters
+    const idNhanVien = req.user.idNhanVien; // Get ID from URL parameters
 
     const query = "SELECT * FROM tknhanvien WHERE idNhanVien = ?";
 
     connection.query(query, [idNhanVien], (error, results) => {
       if (error) {
         console.error(error);
-        return res.status(500).json({ message: "Lỗi server khi lấy thông tin nhân viên." });
+        return res
+          .status(500)
+          .json({ message: "Lỗi server khi lấy thông tin nhân viên." });
       }
 
       if (results.length === 0) {
@@ -256,11 +260,16 @@ const usersController = {
 
     // Validate userName uniqueness
     if (userName) {
-      const query = "SELECT * FROM tknhanvien WHERE userName = ? AND idNhanVien != ?";
+      const query =
+        "SELECT * FROM tknhanvien WHERE userName = ? AND idNhanVien != ?";
       connection.query(query, [userName, idNhanVien], (error, results) => {
         if (error) {
           console.error(error);
-          return res.status(500).json({ message: "Lỗi server khi kiểm tra tính duy nhất của userName." });
+          return res
+            .status(500)
+            .json({
+              message: "Lỗi server khi kiểm tra tính duy nhất của userName.",
+            });
         }
         if (results.length > 0) {
           return res.status(400).json({ message: "Tên đăng nhập đã tồn tại." });
@@ -297,13 +306,24 @@ const usersController = {
     if (passWord) {
       const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
       if (!passwordRegex.test(passWord)) {
-        return res.status(400).json({ message: "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự." });
+        return res
+          .status(400)
+          .json({
+            message:
+              "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự.",
+          });
       } else {
         bcrypt.genSalt(10, (err, salt) => {
-          if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+          if (err)
+            return res
+              .status(500)
+              .json({ message: "Lỗi server khi mã hóa mật khẩu." });
 
           bcrypt.hash(passWord, salt, (err, hashedPassword) => {
-            if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+            if (err)
+              return res
+                .status(500)
+                .json({ message: "Lỗi server khi mã hóa mật khẩu." });
 
             updates.push("passWord = ?");
             values.push(hashedPassword);
@@ -331,34 +351,62 @@ const usersController = {
 
     function updateDatabase() {
       values.push(idNhanVien);
-      const query = `UPDATE tknhanvien SET ${updates.join(", ")} WHERE idNhanVien = ?`;
+      const query = `UPDATE tknhanvien SET ${updates.join(
+        ", "
+      )} WHERE idNhanVien = ?`;
 
       connection.query(query, values, (error, result) => {
         if (error) {
           console.error(error);
-          return res.status(500).json({ message: "Lỗi server khi cập nhật thông tin nhân viên." });
+          return res
+            .status(500)
+            .json({ message: "Lỗi server khi cập nhật thông tin nhân viên." });
         }
 
         if (result.affectedRows === 0) {
-          return res.status(404).json({ message: "Không tìm thấy nhân viên để cập nhật." });
+          return res
+            .status(404)
+            .json({ message: "Không tìm thấy nhân viên để cập nhật." });
         }
 
-        res.status(200).json({ message: "Cập nhật thông tin nhân viên thành công." });
+        res
+          .status(200)
+          .json({ message: "Cập nhật thông tin nhân viên thành công." });
       });
     }
   },
   getConfirmedOrdersByEmployee: (req, res) => {
     const idNhanVien = req.user.idNhanVien; // Get the employee ID from the request (assumes authentication middleware is in place)
 
-    const query = "SELECT * FROM donHang WHERE idNhanVien = ?";
+    const query = `
+        SELECT 
+            dh.idDonHang,
+            dh.tenNguoiNhan,
+            dh.diaChi,
+            dh.SDT,
+            dh.phuongThucTT,
+            dh.ngayDatHang,
+            dh.tongTienDH,
+            dh.trangThai,
+            dv.tenDonVi AS donViVanChuyen
+        FROM donHang dh
+        LEFT JOIN donViVanChuyen dv ON dh.idDonViVanChuyen = dv.idDonViVanChuyen
+        WHERE dh.idNhanVien = ?
+    `;
 
     connection.query(query, [idNhanVien], (error, results) => {
       if (error) {
         console.error(error);
-        return res.status(500).json({ message: "Lỗi server khi lấy đơn hàng đã xác nhận." });
+        return res
+          .status(500)
+          .json({ message: "Lỗi server khi lấy đơn hàng đã xác nhận." });
       }
       if (results.length === 0) {
-        return res.status(404).json({ message: "Không tìm thấy đơn hàng đã xác nhận bởi nhân viên này." });
+        return res
+          .status(404)
+          .json({
+            message: "Không tìm thấy đơn hàng đã xác nhận bởi nhân viên này.",
+          });
       }
       res.status(200).json(results);
     });
@@ -368,7 +416,9 @@ const usersController = {
 
     // Validate input fields
     if (!userName || !passWord || !SDT || !email || !diaChi || !hoTen) {
-      return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin." });
+      return res
+        .status(400)
+        .json({ message: "Vui lòng cung cấp đầy đủ thông tin." });
     }
 
     // Validate email format
@@ -386,38 +436,61 @@ const usersController = {
     // Validate and hash password
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
     if (!passwordRegex.test(passWord)) {
-      return res.status(400).json({ message: "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự." });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự.",
+        });
     }
 
     // Check for userName and email uniqueness
-    const checkUniqueQuery = "SELECT * FROM tknhanvien WHERE userName = ? OR email = ?";
+    const checkUniqueQuery =
+      "SELECT * FROM tknhanvien WHERE userName = ? OR email = ?";
     connection.query(checkUniqueQuery, [userName, email], (error, results) => {
       if (error) {
         console.error(error);
-        return res.status(500).json({ message: "Lỗi server khi kiểm tra tính duy nhất." });
+        return res
+          .status(500)
+          .json({ message: "Lỗi server khi kiểm tra tính duy nhất." });
       }
 
       if (results.length > 0) {
-        return res.status(400).json({ message: "Tên đăng nhập hoặc email đã tồn tại." });
+        return res
+          .status(400)
+          .json({ message: "Tên đăng nhập hoặc email đã tồn tại." });
       }
 
       // Hash the password
       bcrypt.genSalt(10, (err, salt) => {
-        if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+        if (err)
+          return res
+            .status(500)
+            .json({ message: "Lỗi server khi mã hóa mật khẩu." });
 
         bcrypt.hash(passWord, salt, (err, hashedPassword) => {
-          if (err) return res.status(500).json({ message: "Lỗi server khi mã hóa mật khẩu." });
+          if (err)
+            return res
+              .status(500)
+              .json({ message: "Lỗi server khi mã hóa mật khẩu." });
 
           // Insert new user into the database
-          const insertQuery = "INSERT INTO tknhanvien (userName, passWord, SDT, email, diaChi, hoTen, isAdmin) VALUES (?, ?, ?, ?, ?, ?, ?)";
-          connection.query(insertQuery, [userName, hashedPassword, SDT, email, diaChi, hoTen, isAdmin], (error, results) => {
-            if (error) {
-              console.error(error);
-              return res.status(500).json({ message: "Lỗi server khi thêm nhân viên." });
-            }
+          const insertQuery =
+            "INSERT INTO tknhanvien (userName, passWord, SDT, email, diaChi, hoTen, isAdmin) VALUES (?, ?, ?, ?, ?, ?, ?)";
+          connection.query(
+            insertQuery,
+            [userName, hashedPassword, SDT, email, diaChi, hoTen, isAdmin],
+            (error, results) => {
+              if (error) {
+                console.error(error);
+                return res
+                  .status(500)
+                  .json({ message: "Lỗi server khi thêm nhân viên." });
+              }
 
-            res.status(201).json({ message: "Thêm nhân viên thành công." });
-          });
+              res.status(201).json({ message: "Thêm nhân viên thành công." });
+            }
+          );
         });
       });
     });
@@ -431,7 +504,9 @@ const usersController = {
     connection.query(checkUserQuery, [idNhanVien], (error, results) => {
       if (error) {
         console.error(error);
-        return res.status(500).json({ message: "Lỗi server khi kiểm tra nhân viên." });
+        return res
+          .status(500)
+          .json({ message: "Lỗi server khi kiểm tra nhân viên." });
       }
 
       if (results.length === 0) {
@@ -443,13 +518,132 @@ const usersController = {
       connection.query(deleteQuery, [idNhanVien], (error, results) => {
         if (error) {
           console.error(error);
-          return res.status(500).json({ message: "Lỗi server khi xóa nhân viên." });
+          return res
+            .status(500)
+            .json({ message: "Lỗi server khi xóa nhân viên." });
         }
 
         res.status(200).json({ message: "Xóa nhân viên thành công." });
       });
     });
-  }
+  },
+  changePassword: async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const idNhanVien = req.user.idNhanVien; // Assume req.user is populated by your authentication middleware
+
+    // Validate input fields
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({
+          message: "Vui lòng cung cấp mật khẩu hiện tại và mật khẩu mới.",
+        });
+    }
+
+    // Validate new password format
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Mật khẩu phải chứa ít nhất một chữ cái, một số và có ít nhất 6 ký tự.",
+        });
+    }
+
+    // Check if the current password is correct
+    const checkQuery = "SELECT passWord FROM tknhanvien WHERE idNhanVien = ?";
+    connection.query(checkQuery, [idNhanVien], (error, results) => {
+      if (error) {
+        console.error(error);
+        return res
+          .status(500)
+          .json({ message: "Lỗi server khi kiểm tra mật khẩu hiện tại." });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Không tìm thấy nhân viên." });
+      }
+
+      const storedPassword = results[0].passWord;
+
+      // Compare current password with the stored hashed password
+      bcrypt.compare(currentPassword, storedPassword, (err, isMatch) => {
+        if (err) {
+          console.error(err);
+          return res
+            .status(500)
+            .json({ message: "Lỗi server khi so sánh mật khẩu." });
+        }
+
+        if (!isMatch) {
+          return res
+            .status(401)
+            .json({ message: "Mật khẩu hiện tại không chính xác." });
+        }
+
+        // Check if the new password is the same as the current password
+        bcrypt.compare(newPassword, storedPassword, (err, isSame) => {
+          if (err) {
+            console.error(err);
+            return res
+              .status(500)
+              .json({ message: "Lỗi server khi so sánh mật khẩu." });
+          }
+
+          if (isSame) {
+            return res
+              .status(400)
+              .json({
+                message: "Mật khẩu mới không được giống mật khẩu hiện tại.",
+              });
+          }
+
+          // Hash the new password
+          bcrypt.genSalt(10, (err, salt) => {
+            if (err)
+              return res
+                .status(500)
+                .json({ message: "Lỗi server khi mã hóa mật khẩu mới." });
+
+            bcrypt.hash(newPassword, salt, (err, hashedPassword) => {
+              if (err)
+                return res
+                  .status(500)
+                  .json({ message: "Lỗi server khi mã hóa mật khẩu mới." });
+
+              // Update the password in the database
+              const updateQuery =
+                "UPDATE tknhanvien SET passWord = ? WHERE idNhanVien = ?";
+              connection.query(
+                updateQuery,
+                [hashedPassword, idNhanVien],
+                (error, result) => {
+                  if (error) {
+                    console.error(error);
+                    return res
+                      .status(500)
+                      .json({ message: "Lỗi server khi cập nhật mật khẩu." });
+                  }
+
+                  if (result.affectedRows === 0) {
+                    return res
+                      .status(404)
+                      .json({
+                        message:
+                          "Không tìm thấy nhân viên để cập nhật mật khẩu.",
+                      });
+                  }
+
+                  res.status(200).json({ message: "Đổi mật khẩu thành công." });
+                }
+              );
+            });
+          });
+        });
+      });
+    });
+  },
 };
 
 module.exports = usersController;

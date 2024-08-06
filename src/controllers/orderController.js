@@ -263,14 +263,27 @@ const orderController = {
 
   getAllCartDelivery: async (req, res) => {
     try {
-      const query = "SELECT * FROM donhang WHERE trangThai = 'delivery'";
-      const results = await executeQuery(query);
-      res.json(results);
+        const query = `
+            SELECT 
+                donhang.*, 
+                donViVanChuyen.tenDonVi
+            FROM 
+                donhang
+            LEFT JOIN 
+                donViVanChuyen 
+            ON 
+                donhang.idDonViVanChuyen = donViVanChuyen.idDonViVanChuyen
+            WHERE 
+                donhang.trangThai = 'delivery'
+        `;
+        const results = await executeQuery(query);
+        res.json(results);
     } catch (error) {
-      console.error("Unexpected error:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
+        console.error("Unexpected error:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-  },
+},
+
 
   confirmDelivery: async (req, res) => {
     const { idDonHang } = req.body;
@@ -314,16 +327,29 @@ const orderController = {
       res.status(500).json({ message: "Internal Server Error" });
     }
   },
-  getAllCartDone: async (req,res) => {
+  getAllCartDone: async (req, res) => {
     try {
-      const query = "SELECT * FROM donhang WHERE trangThai = 'success'";
-      const results = await executeQuery(query);
-      res.json(results);
+        const query = `
+            SELECT 
+                donhang.*, 
+                donViVanChuyen.tenDonVi
+            FROM 
+                donhang
+            LEFT JOIN 
+                donViVanChuyen 
+            ON 
+                donhang.idDonViVanChuyen = donViVanChuyen.idDonViVanChuyen
+            WHERE 
+                donhang.trangThai = 'success'
+        `;
+        const results = await executeQuery(query);
+        res.json(results);
     } catch (error) {
-      console.error("Unexpected error:", error.message);
-      res.status(500).json({ message: "Internal Server Error" });
+        console.error("Unexpected error:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-  },
+},
+
   
 };
 

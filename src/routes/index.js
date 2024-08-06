@@ -93,8 +93,6 @@ router.put('/customer/put/:idUser', midddlewareController.verifyTokenAndIsEmploy
 router.delete('/customer/del/:idUser', middlewareController.verifyTokenAndIsAdmin,customersAccController.deleteCustomer);
 router.put('/customer/changepassword', midddlewareController.verifyTokenAndIsEmployee,customersAccController.changePassword);
 
-
-
 //taikhoannv
 router.post("/register", usersController.register);
 router.post("/login", usersController.login);
@@ -106,6 +104,7 @@ router.delete("/deleteuser", midddlewareController.verifyTokenAndIsAdmin,usersCo
 router.get("/getuserbyid", midddlewareController.verifyTokenAndIsEmployee,usersController.getUserById);
 router.get("/confirmorderbyuser", midddlewareController.verifyTokenAndIsEmployee,usersController.getConfirmedOrdersByEmployee)
 router.put("/user/put",midddlewareController.verifyTokenAndIsEmployee,usersController.updateUser);
+router.put("/user/changepassword",midddlewareController.verifyTokenAndIsEmployee,usersController.changePassword);
 
 //qldonhang
 router.get("/detailcart/:idDonHang", midddlewareController.verifyTokenAndIsEmployee,orderController.getDetailCart);
