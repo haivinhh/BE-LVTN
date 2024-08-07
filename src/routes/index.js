@@ -13,6 +13,7 @@ const middlewareController = require("../controllers/middlewareController");
 const shipController = require("../controllers/ShipController");
 const orderController = require("../controllers/orderController");
 const customersAccController = require("../controllers/customersAccController");
+const adminController = require("../controllers/adminController");
 
 
 //sanpham
@@ -98,13 +99,20 @@ router.post("/register", usersController.register);
 router.post("/login", usersController.login);
 router.post("/logout", midddlewareController.verifyTokenAndIsEmployee,usersController.logout);
 router.post("/refreshtoken", usersController.requestRefreshToken);
-router.get("/getallusers", midddlewareController.verifyToken,usersController.getAllUsers);
 router.delete("/deletecustomer", usersController.deleteUser);
 router.delete("/deleteuser", midddlewareController.verifyTokenAndIsAdmin,usersController.deleteUser);
 router.get("/getuserbyid", midddlewareController.verifyTokenAndIsEmployee,usersController.getUserById);
 router.get("/confirmorderbyuser", midddlewareController.verifyTokenAndIsEmployee,usersController.getConfirmedOrdersByEmployee)
 router.put("/user/put",midddlewareController.verifyTokenAndIsEmployee,usersController.updateUser);
 router.put("/user/changepassword",midddlewareController.verifyTokenAndIsEmployee,usersController.changePassword);
+
+//qltk nhan vien
+router.get("/getallusers", midddlewareController.verifyTokenAndIsAdmin,adminController.getAllUsers);
+router.post("/user/add", midddlewareController.verifyTokenAndIsAdmin,adminController.addUser);
+router.put("/users/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.updateUser);
+router.delete("/users/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.deleteUser);
+router.post("/users/changePassword/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.changePassword);
+router.get("/confirmorderbyuser/admin/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.getConfirmedOrdersByEmployee)
 
 //qldonhang
 router.get("/detailcart/:idDonHang", midddlewareController.verifyTokenAndIsEmployee,orderController.getDetailCart);

@@ -140,20 +140,6 @@ const usersController = {
       console.log("refreshtokennew: ", newRefreshToken);
     });
   },
-  getAllUsers: (req, res) => {
-    const query = "SELECT * FROM tknhanvien";
-
-    connection.query(query, (error, results) => {
-      if (error) {
-        console.error(error);
-        return res
-          .status(500)
-          .json({ message: "Lỗi server khi lấy danh sách nhân viên." });
-      }
-
-      res.status(200).json(results);
-    });
-  },
   deleteUser: (req, res) => {
     const { idNhanVien } = req.body; // Get ID from URL
 
@@ -495,7 +481,6 @@ const usersController = {
       });
     });
   },
-
   deleteUser: (req, res) => {
     const { idNhanVien } = req.params;
 
