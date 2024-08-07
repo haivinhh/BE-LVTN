@@ -14,7 +14,8 @@ const shipController = require("../controllers/ShipController");
 const orderController = require("../controllers/orderController");
 const customersAccController = require("../controllers/customersAccController");
 const adminController = require("../controllers/adminController");
-
+const forgotPasswordController = require("../controllers/forgotPasswordController");
+const zalopayController = require("../controllers/ZALOPAY/zalopay");
 
 //sanpham
 router.get("/sanpham", productController.getAllProducts);
@@ -124,6 +125,13 @@ router.get("/getallcartdelivery",midddlewareController.verifyTokenAndIsEmployee,
 router.post("/confirmdone",midddlewareController.verifyTokenAndIsEmployee,orderController.confirmDelivery);
 router.get("/getallcartdone", midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCartDone);
 
+// Route để yêu cầu đặt lại mật khẩu
+router.post('/forgot-password', forgotPasswordController.requestPasswordReset);
+
+// Route để thực hiện đặt lại mật khẩu
+router.post('/reset-password', forgotPasswordController.resetPassword);
+
+router.post('/createpayment', midddlewareController.verifyToken,zalopayController.createPayment);
 
 
 module.exports = router;

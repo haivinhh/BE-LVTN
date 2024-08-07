@@ -45,10 +45,16 @@ const sendOrderEmail = async (order, idDonHang, subject, message) => {
     <p><b style="color: black;">${message}</b></p>
     <p><b style="color: black;">Thông tin đơn hàng:</b></p>
     <ul>
-      <li><strong style="color: black;">Tên người nhận:</strong> ${order.tenNguoiNhan}</li>
-      <li><strong style="color: black;">Số điện thoại:</strong> ${order.SDT}</li>
+      <li><strong style="color: black;">Tên người nhận:</strong> ${
+        order.tenNguoiNhan
+      }</li>
+      <li><strong style="color: black;">Số điện thoại:</strong> ${
+        order.SDT
+      }</li>
       <li><strong style="color: black;">Địa chỉ:</strong> ${order.diaChi}</li>
-      <li><strong style="color: black;">Tổng tiền:</strong> ${order.tongTienDH}</li>
+      <li><strong style="color: black;">Tổng tiền:</strong> ${
+        order.tongTienDH
+      }</li>
     </ul>
     <p style="color: black;">Danh sách sản phẩm:</p>
     <table style="width: 100%; border-collapse: collapse;">
@@ -82,7 +88,6 @@ const sendOrderEmail = async (order, idDonHang, subject, message) => {
   `;
   await sendEmail(order.email, subject, emailHTML);
 };
-
 
 const orderController = {
   getAllCart: async (req, res) => {
@@ -180,11 +185,9 @@ const orderController = {
   confirmOrder: async (req, res) => {
     const { idDonHang, idDonViVanChuyen } = req.body;
     if (!idDonHang || !idDonViVanChuyen) {
-      return res
-        .status(400)
-        .json({
-          message: "Missing required fields: idDonHang or idDonViVanChuyen",
-        });
+      return res.status(400).json({
+        message: "Missing required fields: idDonHang or idDonViVanChuyen",
+      });
     }
 
     const idNhanVien = req.user.idNhanVien;
@@ -217,7 +220,7 @@ const orderController = {
       // Update product quantities
       const updateProductQueries = orderDetails.map((item) => {
         return {
-          sql: 'UPDATE sanpham SET soLuong = soLuong - ? WHERE idSanPham = ?',
+          sql: "UPDATE sanpham SET soLuong = soLuong - ? WHERE idSanPham = ?",
           params: [item.soLuong, item.idSanPham],
         };
       });
@@ -263,7 +266,7 @@ const orderController = {
 
   getAllCartDelivery: async (req, res) => {
     try {
-        const query = `
+      const query = `
             SELECT 
                 donhang.*, 
                 donViVanChuyen.tenDonVi
@@ -276,14 +279,13 @@ const orderController = {
             WHERE 
                 donhang.trangThai = 'delivery'
         `;
-        const results = await executeQuery(query);
-        res.json(results);
+      const results = await executeQuery(query);
+      res.json(results);
     } catch (error) {
-        console.error("Unexpected error:", error.message);
-        res.status(500).json({ message: "Internal Server Error" });
+      console.error("Unexpected error:", error.message);
+      res.status(500).json({ message: "Internal Server Error" });
     }
-},
-
+  },
 
   confirmDelivery: async (req, res) => {
     const { idDonHang } = req.body;
@@ -329,7 +331,7 @@ const orderController = {
   },
   getAllCartDone: async (req, res) => {
     try {
-        const query = `
+      const query = `
             SELECT 
                 donhang.*, 
                 donViVanChuyen.tenDonVi
@@ -342,15 +344,13 @@ const orderController = {
             WHERE 
                 donhang.trangThai = 'success'
         `;
-        const results = await executeQuery(query);
-        res.json(results);
+      const results = await executeQuery(query);
+      res.json(results);
     } catch (error) {
-        console.error("Unexpected error:", error.message);
-        res.status(500).json({ message: "Internal Server Error" });
+      console.error("Unexpected error:", error.message);
+      res.status(500).json({ message: "Internal Server Error" });
     }
-},
-
-  
+  },
 };
 
 module.exports = orderController;

@@ -14,7 +14,8 @@ app.use(cors({
     credentials: true  // Cho phép gửi và nhận cookie
   }));
 app.use(express.json());
-app.use(cookieParser());    
+app.use(cookieParser());
+    
 //app.use(express.static('puplic'));
 
 // app.use(session({
