@@ -64,7 +64,7 @@ const customersController = {
       },
       process.env.JWT_ACCESS_KEY,
       {
-        expiresIn: "20s",
+        expiresIn: "120s",
       }
     );
   },

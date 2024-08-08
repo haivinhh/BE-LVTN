@@ -56,7 +56,7 @@ const forgotPasswordController = {
 
   resetPassword: async (req, res) => {
     const { resetCode, newPassword, username } = req.body;
-
+    console.log(resetCode, newPassword, username)
     // Kiểm tra thông tin đầu vào
     if (!resetCode || !newPassword || !username) {
       return res.status(400).json({ message: 'Thiếu thông tin cần thiết để đặt lại mật khẩu.' });
