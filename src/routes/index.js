@@ -71,6 +71,7 @@ router.get("/detailcart", midddlewareController.verifyToken,cartController.getDe
 router.get("/cart", midddlewareController.verifyToken,cartController.getCart);
 router.get("/getdetailcart/:idDonHang", midddlewareController.verifyToken,cartController.getDetailCartOfUser);
 router.delete("/cart/clear", cartController.clearCart);
+router.post("/cancelorder", midddlewareController.verifyToken, cartController.cancelOrder);
 router.put("/cart/updatecartitem", midddlewareController.verifyToken,cartController.updateCartItem);
 router.delete("/cart/deletecartitem", midddlewareController.verifyToken,cartController.deleteCartItem);
 router.post("/paycod", midddlewareController.verifyToken,cartController.payCOD);
