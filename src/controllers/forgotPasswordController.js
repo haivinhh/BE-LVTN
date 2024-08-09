@@ -36,8 +36,8 @@ const forgotPasswordController = {
       // Lưu mã xác thực và thời gian hết hạn vào bộ nhớ tạm thời
       resetTokens[resetCode] = { email, expiryTime };
 
-      // Gửi email đặt lại mật khẩu
-      const resetLink = `http://localhost:3000/reset-password?code=${resetCode}`;
+      // Gửi email đặt lại mật khẩu (include username in the reset link)
+      const resetLink = `http://localhost:3000/reset-password?code=${resetCode}&username=${encodeURIComponent(username)}`;
       const mailOptions = {
         to: email,
         subject: "Đặt lại mật khẩu",
@@ -55,8 +55,9 @@ const forgotPasswordController = {
   },
 
   resetPassword: async (req, res) => {
-    const { resetCode, newPassword, username } = req.body;
-    console.log(resetCode, newPassword, username)
+    const { resetCode, newPassword } = req.body;
+    const username = req.query.username || req.body.username; // Retrieve username from query or body
+
     // Kiểm tra thông tin đầu vào
     if (!resetCode || !newPassword || !username) {
       return res.status(400).json({ message: 'Thiếu thông tin cần thiết để đặt lại mật khẩu.' });
@@ -94,6 +95,7 @@ const forgotPasswordController = {
       res.status(500).json({ message: 'Lỗi server khi đặt lại mật khẩu' });
     }
   }
+
 };
 
 module.exports = forgotPasswordController;
