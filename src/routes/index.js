@@ -135,5 +135,8 @@ router.post('/reset-password', forgotPasswordController.resetPassword);
 router.post('/createpayment', midddlewareController.verifyToken,zalopayController.createPayment);
 router.post('/callback', zalopayController.callback);
 router.post('/check-order-status/:app_trans_id',zalopayController.checkOrderStatus);
+router.post('/refund',  midddlewareController.verifyToken,zalopayController.RefundOrder);
+router.post('/cancelorderonl', midddlewareController.verifyToken,zalopayController.checkOrderStatusAndCancelOrder);
+router.post("/processRefundAndCheckStatus", midddlewareController.verifyToken,zalopayController.processRefundAndCheckStatus);
 
 module.exports = router;
