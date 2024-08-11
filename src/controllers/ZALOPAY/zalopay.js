@@ -11,7 +11,7 @@ const config = {
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
   queryEndpoint: "https://sb-openapi.zalopay.vn/v2/query",
   callback_url:
-    "https://a88e-2405-4803-db3a-88a0-9017-969f-171a-b0cc.ngrok-free.app/api/callback",
+    "https://414f-2405-4803-db3a-88a0-ddc5-cbe-7368-d546.ngrok-free.app/api/callback",
   refund_url: "https://sb-openapi.zalopay.vn/v2/refund",
   query_refund_url: "https://sb-openapi.zalopay.vn/v2/query_refund",
 };
@@ -137,9 +137,10 @@ const zalopayController = {
         const dataJson = JSON.parse(dataStr);
         const appTransId = dataJson["app_trans_id"];
         const zpTransId = dataJson["zp_trans_id"]; // Trích xuất zp_trans_id
+        const user_fee_amount= dataJson["user_fee_amount"]
 
-        // Đảm bảo user_fee_amount luôn là 0
-        dataJson["user_fee_amount"] = 0;
+       
+        
         console.log(dataJson);
         // Trích xuất số tiền từ dataJson
         const amount = dataJson["amount"];
@@ -154,13 +155,13 @@ const zalopayController = {
         // Cập nhật trạng thái đơn hàng, thông tin chi tiết và mã giao dịch
         const updateQuery = `
                 UPDATE donhang
-                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?, maGiaoDich = ?
+                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?, maGiaoDich = ?, phiDichVu = ?
                 WHERE idDonHang = ?
             `;
 
         connection.query(
           updateQuery,
-          [tenNguoiNhan, diaChi, SDT, zpTransId, idDonHang], // Thêm zpTransId vào các tham số truy vấn
+          [tenNguoiNhan, diaChi, SDT, zpTransId,user_fee_amount, idDonHang], // Thêm zpTransId vào các tham số truy vấn
           (err, updateResult) => {
             if (err) {
               console.error("Lỗi cập nhật đơn hàng:", err.message);
@@ -253,7 +254,7 @@ const zalopayController = {
     try {
       // Query để kiểm tra thông tin đơn hàng
       const query = `
-        SELECT dh.idDonHang, dh.phuongThucTT, dh.trangThai, dh.tongTienDH, dh.maGiaoDich
+        SELECT dh.idDonHang, dh.phuongThucTT, dh.trangThai, dh.tongTienDH, dh.maGiaoDich ,  dh.phiDichVu
         FROM donhang dh
         WHERE dh.idUser = ? AND dh.idDonHang = ?;
       `;
@@ -283,7 +284,11 @@ const zalopayController = {
             null
           );
         }
-
+        
+        const refund_fee_amount = order.phiDichVu;
+        console.log(refund_fee_amount)
+        const refund_amount = order.tongTienDH - refund_fee_amount ;
+        console.log("b",refund_amount)
         // Xử lý hoàn tiền
         const timestamp = Date.now();
         const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // id duy nhất
@@ -293,7 +298,7 @@ const zalopayController = {
           m_refund_id: `${moment().format("YYMMDD")}_${config.app_id}_${uid}`,
           timestamp, // milliseconds
           zp_trans_id: order.maGiaoDich, // Lấy zp_trans_id từ cột maGiaoDich
-          amount: order.tongTienDH,
+          amount: refund_amount,
           description: `Hoàn tiền cho đơn hàng #${idDonHang}`,
         };
 

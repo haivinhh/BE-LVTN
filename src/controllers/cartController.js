@@ -166,40 +166,80 @@ const cartController = {
   getDetailCart: (req, res) => {
     const idUser = req.user.idUser;
     if (!idUser) {
-      return res
-        .status(400)
-        .json({ message: "Missing required field: idUser" });
+      return res.status(400).json({ message: "Missing required field: idUser" });
     }
-
+  
     const query = `
-        SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
-       p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
-       c.tongTienDH AS tongTienDH, c.khuyenMai AS khuyenMai
-FROM chitietdonhang dc
-JOIN sanpham p ON dc.idSanPham = p.idSanPham
-JOIN donhang c ON dc.idDonHang = c.idDonHang
-WHERE c.idUser = ? AND c.trangThai = 'unpaid'
+      SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
+             p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
+             c.tongTienDH AS tongTienDH, c.khuyenMai AS khuyenMai
+      FROM chitietdonhang dc
+      JOIN sanpham p ON dc.idSanPham = p.idSanPham
+      JOIN donhang c ON dc.idDonHang = c.idDonHang
+      WHERE c.idUser = ? AND c.trangThai = 'unpaid'
     `;
-
+  
     connection.query(query, [idUser], (err, results) => {
       if (err) {
         return res.status(500).json({ message: err.message });
       }
-
-      // Extract the cart ID from the results (assuming results contain the cart ID)
+  
       const cart_id = results.length > 0 ? results[0].idDonHang : null;
-
+  
       if (cart_id) {
-        // Call setPromotion to apply discounts
-        cartController.setPromotion(cart_id, (err) => {
+        const promotionQuery = `
+          SELECT SUM(dc.soLuong) AS totalQuantity, c.idUser, k.KHThanThiet
+          FROM chitietdonhang dc
+          JOIN donhang c ON dc.idDonHang = c.idDonHang
+          JOIN taiKhoanKH k ON c.idUser = k.idUser
+          WHERE dc.idDonHang = ?
+          GROUP BY c.idUser, k.KHThanThiet
+        `;
+  
+        connection.query(promotionQuery, [cart_id], (err, promoResults) => {
           if (err) {
-            return res
-              .status(500)
-              .json({ message: "Failed to apply promotion" });
+            console.error("Error fetching order details:", err);
+            return res.status(500).json({ message: "Failed to apply promotion" });
           }
-
-          // Return cart details after applying promotion
-          res.json(results);
+  
+          if (promoResults.length === 0) {
+            return res.status(404).json({ message: "No such order found" });
+          }
+  
+          const { totalQuantity, KHThanThiet } = promoResults[0];
+          let discount = 0;
+  
+          if (totalQuantity > 4) {
+            if (KHThanThiet === 1) {
+              discount = 0.3; // 30% discount for loyal customers with 5 or more products
+            } else {
+              discount = 0.1; // 10% discount for orders with 5 or more products
+            }
+          } else if (KHThanThiet === 1) {
+            discount = 0.2; // 20% discount for loyal customers with fewer than 5 products
+          }
+  
+          console.log("Total Quantity:", totalQuantity);
+          console.log("Discount:", discount);
+  
+          const updateQuery = `
+            UPDATE donhang
+            SET khuyenMai = ?
+            WHERE idDonHang = ? AND trangThai = 'unpaid'
+          `;
+  
+          connection.query(updateQuery, [discount, cart_id], (err, updateResult) => {
+            if (err) {
+              console.error("Error updating promotion:", err);
+              return res.status(500).json({ message: "Failed to apply promotion" });
+            }
+  
+            // Update cart total after applying promotion
+            cartController.updateCartTotal(cart_id);
+  
+            // Return the cart details with the updated promotion
+            res.json(results);
+          });
         });
       } else {
         // No cart found
@@ -207,67 +247,8 @@ WHERE c.idUser = ? AND c.trangThai = 'unpaid'
       }
     });
   },
-
-  // Function to set promotion
-  setPromotion: (cart_id, callback) => {
-    const query = `
-      SELECT SUM(dc.soLuong) AS totalQuantity, c.idUser, k.KHThanThiet
-      FROM chitietdonhang dc
-      JOIN donhang c ON dc.idDonHang = c.idDonHang
-      JOIN taiKhoanKH k ON c.idUser = k.idUser
-      WHERE dc.idDonHang = ?
-      GROUP BY c.idUser, k.KHThanThiet
-    `;
-
-    connection.query(query, [cart_id], (err, results) => {
-      if (err) {
-        console.error("Error fetching order details:", err);
-        return callback(err);
-      }
-
-      if (results.length === 0) {
-        return callback(new Error("No such order found"));
-      }
-
-      const { totalQuantity, KHThanThiet } = results[0];
-      let discount = 0;
-
-      if (totalQuantity >= 5) {
-        if (KHThanThiet === 1) {
-          discount = 0.3; // 30% discount for loyal customers with 5 or more products
-        } else {
-          discount = 0.1; // 10% discount for orders with 5 or more products
-        }
-      } else if (KHThanThiet === 1) {
-        discount = 0.2; // 20% discount for loyal customers with fewer than 5 products
-      }
-
-      console.log("Total Quantity:", totalQuantity);
-      console.log("Discount:", discount);
-
-      const updateQuery = `
-        UPDATE donhang
-        SET khuyenMai = ?
-        WHERE idDonHang = ? AND trangThai = 'unpaid'
-      `;
-
-      connection.query(updateQuery, [discount, cart_id], (err, result) => {
-        if (err) {
-          console.error("Error updating promotion:", err);
-          return callback(err);
-        }
-        if (result.affectedRows === 0) {
-          console.log(
-            "No rows updated. Check if the cart_id and status match."
-          );
-        } else {
-          console.log("Promotion updated successfully");
-        }
-        callback(null);
-      });
-    });
-  },
-
+  
+  
   getCart: (req, res) => {
     const idUser = req.user.idUser;
     console.log(idUser);
