@@ -138,5 +138,6 @@ router.post('/check-order-status/:app_trans_id',zalopayController.checkOrderStat
 router.post('/refund',  midddlewareController.verifyToken,zalopayController.RefundOrder);
 router.post('/cancelorderonl', midddlewareController.verifyToken,zalopayController.checkOrderStatusAndCancelOrder);
 router.post("/processRefundAndCheckStatus", midddlewareController.verifyToken,zalopayController.processRefundAndCheckStatus);
+router.post("/checko", midddlewareController.verifyToken,zalopayController.checkOrder)
 
 module.exports = router;

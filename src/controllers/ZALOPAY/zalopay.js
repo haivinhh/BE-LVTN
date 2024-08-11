@@ -11,7 +11,7 @@ const config = {
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
   queryEndpoint: "https://sb-openapi.zalopay.vn/v2/query",
   callback_url:
-    "https://1c6d-2405-4803-db3a-88a0-c92-f0ef-66c2-82c8.ngrok-free.app/api/callback",
+    "https://a88e-2405-4803-db3a-88a0-9017-969f-171a-b0cc.ngrok-free.app/api/callback",
   refund_url: "https://sb-openapi.zalopay.vn/v2/refund",
   query_refund_url: "https://sb-openapi.zalopay.vn/v2/query_refund",
 };
@@ -122,7 +122,7 @@ const zalopayController = {
   },
 
   callback: (req, res) => {
-    console.log("Callback received:", req.body); // Log the incoming request body
+    console.log("Callback received:", req.body); // Ghi log yêu cầu nhận được
     let result = {};
     try {
       const dataStr = req.body.data;
@@ -136,15 +136,22 @@ const zalopayController = {
       } else {
         const dataJson = JSON.parse(dataStr);
         const appTransId = dataJson["app_trans_id"];
-        const zpTransId = dataJson["zp_trans_id"]; // Extract zp_trans_id
+        const zpTransId = dataJson["zp_trans_id"]; // Trích xuất zp_trans_id
+
+        // Đảm bảo user_fee_amount luôn là 0
+        dataJson["user_fee_amount"] = 0;
+        console.log(dataJson);
+        // Trích xuất số tiền từ dataJson
+        const amount = dataJson["amount"];
+        console.log(`Số tiền nhận được khi thanh toán thành công: ${amount}`);
         const { tenNguoiNhan, diaChi, SDT } = JSON.parse(
           dataJson["embed_data"]
         );
 
-        // Extract the idDonHang from appTransId
+        // Trích xuất idDonHang từ appTransId
         const idDonHang = appTransId.split("_")[2];
 
-        // Update the order's status, details, and transaction ID
+        // Cập nhật trạng thái đơn hàng, thông tin chi tiết và mã giao dịch
         const updateQuery = `
                 UPDATE donhang
                 SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?, maGiaoDich = ?
@@ -153,15 +160,15 @@ const zalopayController = {
 
         connection.query(
           updateQuery,
-          [tenNguoiNhan, diaChi, SDT, zpTransId, idDonHang], // Add zpTransId to the query parameters
+          [tenNguoiNhan, diaChi, SDT, zpTransId, idDonHang], // Thêm zpTransId vào các tham số truy vấn
           (err, updateResult) => {
             if (err) {
-              console.error("Error updating order:", err.message);
+              console.error("Lỗi cập nhật đơn hàng:", err.message);
               result.return_code = 0;
               result.return_message = err.message;
             } else {
               console.log(
-                `Order ${idDonHang} updated with recipient details, transaction ID, and status set to 'waiting'.`
+                `Đơn hàng ${idDonHang} đã được cập nhật với thông tin người nhận, mã giao dịch và trạng thái được đặt là 'waiting'.`
               );
               result.return_code = 1;
               result.return_message = "success";
@@ -171,13 +178,12 @@ const zalopayController = {
         );
       }
     } catch (ex) {
-      console.log("Error:", ex.message);
+      console.log("Lỗi:", ex.message);
       result.return_code = 0;
       result.return_message = ex.message;
       res.json(result);
     }
   },
-
   checkOrderStatus: async (req, res) => {
     try {
       const { app_trans_id } = req.params;
@@ -570,36 +576,76 @@ const zalopayController = {
       const { idDonHang } = req.body;
       const userId = req.user.idUser; // Lấy userId từ token
 
+      // Hàm đệ quy để kiểm tra trạng thái hoàn tiền
+      const checkStatusUntilSuccess = (idDonHang, callback, attempts = 0) => {
+        if (attempts >= 10) {
+          // Giới hạn số lần thử nếu cần
+          return callback(
+            {
+              status: 500,
+              data: {
+                message: "Đã hết số lần thử kiểm tra trạng thái hoàn tiền.",
+              },
+            },
+            null
+          );
+        }
+
+        zalopayController.checkOrderStatusAndCancelOrder(
+          idDonHang,
+          (checkStatusError, checkStatusResult) => {
+            if (checkStatusError) {
+              console.error(
+                "Lỗi khi kiểm tra trạng thái đơn hàng:",
+                checkStatusError.message
+              );
+              return callback(checkStatusError, null);
+            }
+
+            if (checkStatusResult.data.return_code === 1) {
+              // Thành công, dừng lại
+              return callback(null, checkStatusResult);
+            } else if (checkStatusResult.data.return_code === 3) {
+              // Hoàn tiền đang xử lý, tiếp tục kiểm tra sau một thời gian
+              setTimeout(() => {
+                checkStatusUntilSuccess(idDonHang, callback, attempts + 1);
+              }, 2000); // Chờ 10 giây trước khi kiểm tra lại
+            } else {
+              // Trường hợp khác, trả về lỗi
+              return callback(
+                {
+                  status: 500,
+                  data: {
+                    message: "Không thể xử lý hoàn tiền.",
+                    refund_response: checkStatusResult.data,
+                  },
+                },
+                null
+              );
+            }
+          }
+        );
+      };
+
       // Gọi hàm RefundOrder đầu tiên
       zalopayController.RefundOrder(
         idDonHang,
         userId,
         async (refundError, refundResult) => {
           if (refundError) {
-            return res.status(refundResult.status).json(refundResult.data);
+            return res.status(refundError.status).json(refundError.data);
           }
 
           if (refundResult.data.message !== "Order cannot be cancelled.") {
             // Đợi 2 giây trước khi tiếp tục
             setTimeout(() => {
-              zalopayController.checkOrderStatusAndCancelOrder(
-                idDonHang,
-                (checkStatusError, checkStatusResult) => {
-                  if (checkStatusError) {
-                    console.error(
-                      "Lỗi khi kiểm tra trạng thái đơn hàng:",
-                      checkStatusError.message
-                    );
-                    return res
-                      .status(checkStatusResult.status)
-                      .json(checkStatusResult.data);
-                  }
-
-                  res
-                    .status(checkStatusResult.status)
-                    .json(checkStatusResult.data);
+              checkStatusUntilSuccess(idDonHang, (finalError, finalResult) => {
+                if (finalError) {
+                  return res.status(finalError.status).json(finalError.data);
                 }
-              );
+
+                res.status(finalResult.status).json(finalResult.data);
+              });
             }, 2000);
           } else {
             res.status(refundResult.status).json(refundResult.data);
@@ -611,12 +657,133 @@ const zalopayController = {
         "Lỗi khi xử lý hoàn tiền và kiểm tra trạng thái:",
         error.message
       );
+      res.status(500).json({
+        message: "Lỗi khi xử lý hoàn tiền và kiểm tra trạng thái.",
+        error: error.message,
+      });
+    }
+  },
+
+  checkOrder: async (req, res) => {
+    try {
+      const { idDonHang } = req.body;
+
+      // Query to get the maHoanTien from the database based on idDonHang
+      const getOrderDetailsQuery = `SELECT maHoanTien
+      FROM donhang
+      WHERE idDonHang = ?`;
+
+      connection.query(
+        getOrderDetailsQuery,
+        [idDonHang],
+        async (err, results) => {
+          if (err) {
+            console.error("Error fetching order details:", err.message);
+            return res.status(500).json({
+              message: "Error fetching order details",
+              error: err.message,
+            });
+          }
+
+          if (results.length === 0) {
+            console.error("Order not found:", idDonHang);
+            return res.status(404).json({ message: "Order not found" });
+          }
+
+          const { maHoanTien } = results[0];
+
+          // If no refund ID is found, return an error
+          if (!maHoanTien) {
+            console.error("No refund request found for this order:", idDonHang);
+            return res
+              .status(400)
+              .json({ message: "No refund request found for this order." });
+          }
+
+          // Prepare the parameters for the refund status check
+          const timestamp = Date.now();
+          const postData = {
+            app_id: config.app_id,
+            m_refund_id: maHoanTien,
+            timestamp,
+          };
+
+          // Generate the MAC (Message Authentication Code)
+          const data = `${postData.app_id}|${postData.m_refund_id}|${postData.timestamp}`;
+          postData.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
+
+          const postConfig = {
+            method: "post",
+            url: config.query_refund_url, // Replace with the actual refund status query endpoint
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data: qs.stringify(postData),
+          };
+
+          try {
+            const result = await axios(postConfig);
+
+            console.log("Refund status response:", result.data);
+
+            if (result.data.return_code === 1) {
+              // Refund was successful, update the order
+              const updateOrderQuery = `
+              UPDATE donhang
+              SET phuongThucTT = NULL,
+                  tenNguoiNhan = NULL,
+                  SDT = NULL,
+                  diaChi = NULL,
+                  maGiaoDich = NULL,
+                  maHoanTien = NULL,
+                  trangThai = 'unpaid'
+              WHERE idDonHang = ?
+            `;
+
+              connection.query(updateOrderQuery, [idDonHang], (updateErr) => {
+                if (updateErr) {
+                  console.error("Error updating order:", updateErr.message);
+                  return res
+                    .status(500)
+                    .json({ message: "Error updating order status." });
+                }
+
+                res.status(200).json({
+                  return_code: 1,
+                  return_message:
+                    "Refund confirmed and order updated successfully.",
+                  data: result.data,
+                });
+              });
+            } else if (result.data.return_code === 3) {
+              // Refund is in progress, return a pending status
+              res.status(202).json({
+                return_code: 3,
+                return_message:
+                  "Refund is in progress. Please check the status later.",
+                refund_response: result.data,
+              });
+            } else {
+              // Handle other cases
+              res.status(500).json({
+                message: "Failed to retrieve refund status.",
+                refund_response: result.data,
+              });
+            }
+          } catch (error) {
+            console.log("Error during refund status check:", error.message);
+            res.status(500).json({
+              message: "Error during refund status check.",
+              error: error.message,
+            });
+          }
+        }
+      );
+    } catch (error) {
+      console.log("Error:", error.message);
       res
         .status(500)
-        .json({
-          message: "Lỗi khi xử lý hoàn tiền và kiểm tra trạng thái.",
-          error: error.message,
-        });
+        .json({ message: "Error processing request.", error: error.message });
     }
   },
 };
