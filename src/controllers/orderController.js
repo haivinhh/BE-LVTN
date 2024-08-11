@@ -196,7 +196,7 @@ const orderController = {
     }
 
     try {
-      // Update order status
+      // Cập nhật trạng thái đơn hàng
       const updateOrderQuery =
         "UPDATE donhang SET trangThai = 'delivery', idDonViVanChuyen = ?, idNhanVien = ? WHERE idDonHang = ?";
       const updateOrderResult = await executeQuery(updateOrderQuery, [
@@ -209,7 +209,7 @@ const orderController = {
         return res.status(404).json({ message: "Order not found" });
       }
 
-      // Get order details for updating product quantities
+      // Lấy chi tiết đơn hàng để cập nhật số lượng sản phẩm
       const orderDetailsQuery = `
         SELECT dc.idChiTietDH, dc.idSanPham, dc.soLuong
         FROM chitietdonhang dc
@@ -217,7 +217,7 @@ const orderController = {
       `;
       const orderDetails = await executeQuery(orderDetailsQuery, [idDonHang]);
 
-      // Update product quantities
+      // Cập nhật số lượng sản phẩm
       const updateProductQueries = orderDetails.map((item) => {
         return {
           sql: "UPDATE sanpham SET soLuong = soLuong - ? WHERE idSanPham = ?",
@@ -229,16 +229,19 @@ const orderController = {
         await executeQuery(query.sql, query.params);
       }
 
-      // Get order details for email
+      // Gửi thông báo xác nhận thành công trước khi gửi email
+      res.json({ message: "Order confirmed successfully" });
+
+      // Sau khi gửi thông báo thành công, gửi email
       const orderResults = await getOrderDetailsForEmail(idDonHang);
       if (orderResults.length === 0) {
-        return res.status(404).json({ message: "Order not found" });
+        console.error("Order not found for email");
+        return;
       }
 
       const order = orderResults[0];
       order.items = orderResults;
 
-      // Send order email
       await sendOrderEmail(
         order,
         idDonHang,
@@ -246,7 +249,6 @@ const orderController = {
         "Đơn hàng của bạn đã được xác nhận và đang được giao."
       );
 
-      res.json({ message: "Order confirmed successfully" });
     } catch (error) {
       console.error("Unexpected error:", error.message);
       res.status(500).json({ message: "Internal Server Error" });
@@ -290,9 +292,7 @@ const orderController = {
   confirmDelivery: async (req, res) => {
     const { idDonHang } = req.body;
     if (!idDonHang) {
-      return res
-        .status(400)
-        .json({ message: "Missing required field: idDonHang" });
+      return res.status(400).json({ message: "Missing required field: idDonHang" });
     }
 
     const idNhanVien = req.user.idNhanVien;
@@ -309,13 +309,19 @@ const orderController = {
         return res.status(404).json({ message: "Order not found" });
       }
 
+      // Gửi thông báo xác nhận thành công trước khi gửi email
+      res.json({ message: "Delivery confirmed successfully" });
+
+      // Sau khi gửi thông báo thành công, gửi email
       const orderResults = await getOrderDetailsForEmail(idDonHang);
       if (orderResults.length === 0) {
-        return res.status(404).json({ message: "Order not found" });
+        console.error("Order not found for email");
+        return;
       }
 
       const order = orderResults[0];
       order.items = orderResults;
+
       await sendOrderEmail(
         order,
         idDonHang,
@@ -323,7 +329,6 @@ const orderController = {
         "Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã mua sắm với chúng tôi!"
       );
 
-      res.json({ message: "Delivery confirmed successfully" });
     } catch (error) {
       console.error("Unexpected error:", error.message);
       res.status(500).json({ message: "Internal Server Error" });

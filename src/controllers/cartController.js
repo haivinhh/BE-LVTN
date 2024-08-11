@@ -165,7 +165,6 @@ const cartController = {
 
   getDetailCart: (req, res) => {
     const idUser = req.user.idUser;
-    console.log(idUser);
     if (!idUser) {
       return res
         .status(400)
@@ -174,12 +173,12 @@ const cartController = {
 
     const query = `
         SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
-               p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
-               c.tongTienDH AS tongTienDH
-        FROM chitietdonhang dc
-        JOIN sanpham p ON dc.idSanPham = p.idSanPham
-        JOIN donhang c ON dc.idDonHang = c.idDonHang
-        WHERE c.idUser = ? AND c.trangThai = 'unpaid'
+       p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
+       c.tongTienDH AS tongTienDH, c.khuyenMai AS khuyenMai
+FROM chitietdonhang dc
+JOIN sanpham p ON dc.idSanPham = p.idSanPham
+JOIN donhang c ON dc.idDonHang = c.idDonHang
+WHERE c.idUser = ? AND c.trangThai = 'unpaid'
     `;
 
     connection.query(query, [idUser], (err, results) => {
@@ -187,9 +186,88 @@ const cartController = {
         return res.status(500).json({ message: err.message });
       }
 
-      res.json(results);
+      // Extract the cart ID from the results (assuming results contain the cart ID)
+      const cart_id = results.length > 0 ? results[0].idDonHang : null;
+
+      if (cart_id) {
+        // Call setPromotion to apply discounts
+        cartController.setPromotion(cart_id, (err) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ message: "Failed to apply promotion" });
+          }
+
+          // Return cart details after applying promotion
+          res.json(results);
+        });
+      } else {
+        // No cart found
+        res.status(404).json({ message: "No cart found" });
+      }
     });
   },
+
+  // Function to set promotion
+  setPromotion: (cart_id, callback) => {
+    const query = `
+      SELECT SUM(dc.soLuong) AS totalQuantity, c.idUser, k.KHThanThiet
+      FROM chitietdonhang dc
+      JOIN donhang c ON dc.idDonHang = c.idDonHang
+      JOIN taiKhoanKH k ON c.idUser = k.idUser
+      WHERE dc.idDonHang = ?
+      GROUP BY c.idUser, k.KHThanThiet
+    `;
+
+    connection.query(query, [cart_id], (err, results) => {
+      if (err) {
+        console.error("Error fetching order details:", err);
+        return callback(err);
+      }
+
+      if (results.length === 0) {
+        return callback(new Error("No such order found"));
+      }
+
+      const { totalQuantity, KHThanThiet } = results[0];
+      let discount = 0;
+
+      if (totalQuantity >= 5) {
+        if (KHThanThiet === 1) {
+          discount = 0.3; // 30% discount for loyal customers with 5 or more products
+        } else {
+          discount = 0.1; // 10% discount for orders with 5 or more products
+        }
+      } else if (KHThanThiet === 1) {
+        discount = 0.2; // 20% discount for loyal customers with fewer than 5 products
+      }
+
+      console.log("Total Quantity:", totalQuantity);
+      console.log("Discount:", discount);
+
+      const updateQuery = `
+        UPDATE donhang
+        SET khuyenMai = ?
+        WHERE idDonHang = ? AND trangThai = 'unpaid'
+      `;
+
+      connection.query(updateQuery, [discount, cart_id], (err, result) => {
+        if (err) {
+          console.error("Error updating promotion:", err);
+          return callback(err);
+        }
+        if (result.affectedRows === 0) {
+          console.log(
+            "No rows updated. Check if the cart_id and status match."
+          );
+        } else {
+          console.log("Promotion updated successfully");
+        }
+        callback(null);
+      });
+    });
+  },
+
   getCart: (req, res) => {
     const idUser = req.user.idUser;
     console.log(idUser);
@@ -263,22 +341,50 @@ const cartController = {
   },
 
   updateCartTotal: (cart_id) => {
-    const query = `
-    UPDATE donhang c
-    SET c.tongTienDH = (
-      SELECT SUM(dc.tongTien) AS total
+    const getTotalAndDiscountQuery = `
+      SELECT 
+        SUM(dc.tongTien) AS totalBeforeDiscount, 
+        c.khuyenMai
       FROM chitietdonhang dc
-      WHERE dc.idDonHang = ? AND c.idDonHang = dc.idDonHang AND c.trangThai = 'unpaid'
-    )
-    WHERE c.idDonHang = ? AND c.trangThai = 'unpaid'
-  `;
+      JOIN donhang c ON dc.idDonHang = c.idDonHang
+      WHERE dc.idDonHang = ? AND c.trangThai = 'unpaid'
+      GROUP BY c.idDonHang
+    `;
 
-    connection.query(query, [cart_id, cart_id], (err, result) => {
+    connection.query(getTotalAndDiscountQuery, [cart_id], (err, results) => {
       if (err) {
-        console.error("Error updating cart total:", err);
+        console.error("Error fetching total and discount:", err);
         return;
       }
-      console.log("Cart total updated successfully");
+
+      if (results.length === 0) {
+        console.error("No such order found or order is not unpaid.");
+        return;
+      }
+
+      const { totalBeforeDiscount, khuyenMai } = results[0];
+      const discountAmount = totalBeforeDiscount * khuyenMai; // Calculate discount amount
+      const totalAfterDiscount = totalBeforeDiscount - discountAmount; // Calculate total after discount
+
+      const updateTotalQuery = `
+        UPDATE donhang
+        SET tongTienDH = ?
+        WHERE idDonHang = ? AND trangThai = 'unpaid'
+      `;
+
+      connection.query(
+        updateTotalQuery,
+        [totalAfterDiscount, cart_id],
+        (err) => {
+          if (err) {
+            console.error("Error updating cart total:", err);
+            return;
+          }
+          console.log(
+            "Cart total updated successfully after applying discount."
+          );
+        }
+      );
     });
   },
 
@@ -321,11 +427,15 @@ const cartController = {
     connection.query(checkOrderQuery, [idDonHang, idUser], (err, results) => {
       if (err) {
         console.error("Database query error:", err);
-        return res.status(500).json({ message: "Internal server error while checking the order." });
+        return res
+          .status(500)
+          .json({ message: "Internal server error while checking the order." });
       }
 
       if (results.length === 0) {
-        return res.status(404).json({ message: "Order not found or not valid for cancellation." });
+        return res
+          .status(404)
+          .json({ message: "Order not found or not valid for cancellation." });
       }
 
       // Cập nhật thông tin đơn hàng và trạng thái
@@ -338,19 +448,24 @@ const cartController = {
       connection.query(updateOrderQuery, [idDonHang], (err, result) => {
         if (err) {
           console.error("Database query error:", err);
-          return res.status(500).json({ message: "Internal server error while updating the order." });
+          return res.status(500).json({
+            message: "Internal server error while updating the order.",
+          });
         }
 
         // Kiểm tra số lượng hàng bị ảnh hưởng
         if (result.affectedRows === 0) {
-          return res.status(404).json({ message: "Failed to cancel the order. It might have been already processed." });
+          return res.status(404).json({
+            message:
+              "Failed to cancel the order. It might have been already processed.",
+          });
         }
 
         res.status(200).json({ message: "Order canceled successfully." });
       });
     });
   },
-  
+
   updateCartItem: (req, res) => {
     const idUser = req.user.idUser;
     const { idChiTietDH, soLuong } = req.body;
