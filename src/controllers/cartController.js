@@ -257,7 +257,7 @@ const cartController = {
         .status(400)
         .json({ message: "Missing required field: idUser" });
     }
-    const query = `SELECT * FROM donhang WHERE idUser = ?`;
+    const query = `SELECT * FROM donhang WHERE idUser = ? AND trangThai != 'unpaid'`;
     connection.query(query, [idUser], (err, results) => {
       if (err) {
         return res.status(500).json({ message: err.message });

@@ -288,52 +288,105 @@ const orderController = {
       res.status(500).json({ message: "Internal Server Error" });
     }
   },
+  updateCustomerLoyalty : async (customerId) => {
+    try {
+      // Step 1: Get all successful orders for the customer
+      const queryOrders = 'SELECT * FROM donHang WHERE idUser = ? AND trangThai = "success"';
+      const orders = await new Promise((resolve, reject) => {
+        connection.query(queryOrders, [customerId], (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        });
+      });
+  
+      // Step 2: Count the total number of products in all successful orders
+      let totalProductCount = 0;
+      for (const order of orders) {
+        const orderId = order.idDonHang;
+        const orderDetails = await new Promise((resolve, reject) => {
+          connection.query('SELECT SUM(soLuong) AS productCount FROM chiTietDonHang WHERE idDonHang = ?', [orderId], (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
+          });
+        });
+        totalProductCount += orderDetails[0].productCount || 0;
+      }
+  
+      // Step 3: Update the loyalty status if total product count >= 10
+      if (totalProductCount > 9) {
+        await new Promise((resolve, reject) => {
+          connection.query('UPDATE taikhoankh SET khThanThiet = 1 WHERE idUser = ?', [customerId], (err) => {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error updating customer loyalty:', error);
+      throw error; // Re-throw to handle in the calling function
+    }
+  },
 
   confirmDelivery: async (req, res) => {
     const { idDonHang } = req.body;
     if (!idDonHang) {
       return res.status(400).json({ message: "Missing required field: idDonHang" });
     }
-
+  
     const idNhanVien = req.user.idNhanVien;
     if (!idNhanVien) {
       return res.status(403).json({ message: "User not authorized" });
     }
-
+  
     try {
-      const query =
-        "UPDATE donhang SET trangThai = 'success', idNhanVien = ? WHERE idDonHang = ?";
+      // Confirm the delivery
+      const query = "UPDATE donhang SET trangThai = 'success', idNhanVien = ? WHERE idDonHang = ?";
       const results = await executeQuery(query, [idNhanVien, idDonHang]);
-
+  
       if (results.affectedRows === 0) {
         return res.status(404).json({ message: "Order not found" });
       }
-
-      // Gửi thông báo xác nhận thành công trước khi gửi email
+  
+      // Send success notification
       res.json({ message: "Delivery confirmed successfully" });
-
-      // Sau khi gửi thông báo thành công, gửi email
-      const orderResults = await getOrderDetailsForEmail(idDonHang);
-      if (orderResults.length === 0) {
+  
+      // Get customer ID from the order details
+      const orderResults = await new Promise((resolve, reject) => {
+        connection.query('SELECT idUser FROM donHang WHERE idDonHang = ?', [idDonHang], (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        });
+      });
+  
+      if (orderResults.length > 0) {
+        const customerId = orderResults[0].idUser;
+        // Update customer loyalty status
+        await orderController.updateCustomerLoyalty(customerId);
+      }
+  
+      // Send confirmation email
+      const orderDetails = await getOrderDetailsForEmail(idDonHang);
+      if (orderDetails.length === 0) {
         console.error("Order not found for email");
         return;
       }
-
-      const order = orderResults[0];
-      order.items = orderResults;
-
+  
+      const order = orderDetails[0];
+      order.items = orderDetails;
+  
       await sendOrderEmail(
         order,
         idDonHang,
         "Đơn hàng của bạn đã được giao",
         "Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã mua sắm với chúng tôi!"
       );
-
+  
     } catch (error) {
       console.error("Unexpected error:", error.message);
       res.status(500).json({ message: "Internal Server Error" });
     }
   },
+  
   getAllCartDone: async (req, res) => {
     try {
       const query = `
