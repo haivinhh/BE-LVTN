@@ -409,6 +409,75 @@ const orderController = {
       res.status(500).json({ message: "Internal Server Error" });
     }
   },
+  deliveryfailCOD: async (req, res) => {
+    const { idDonHang } = req.body;
+    if (!idDonHang) {
+      return res.status(400).json({ message: "Missing required field: idDonHang" });
+    }
+
+    const idNhanVien = req.user.idNhanVien;
+    if (!idNhanVien) {
+      return res.status(403).json({ message: "User not authorized" });
+    }
+
+    try {
+      // Step 1: Update the order status to 'unreceive' and reset transaction and refund codes
+      const updateOrderQuery = `
+        UPDATE donhang 
+        SET 
+          trangThai = 'unreceive'
+        WHERE idDonHang = ?
+      `;
+      const updateOrderResult = await executeQuery(updateOrderQuery, [idDonHang]);
+
+      if (updateOrderResult.affectedRows === 0) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Step 2: Get order details to update product quantities
+      const getOrderDetailsQuery = `
+        SELECT idSanPham, soLuong 
+        FROM chitietdonhang 
+        WHERE idDonHang = ?
+      `;
+      const orderDetails = await executeQuery(getOrderDetailsQuery, [idDonHang]);
+
+      // Step 3: Update product quantities
+      const updateProductQueries = orderDetails.map((item) => {
+        return {
+          sql: "UPDATE sanpham SET soLuong = soLuong + ? WHERE idSanPham = ?",
+          params: [item.soLuong, item.idSanPham],
+        };
+      });
+
+      for (const query of updateProductQueries) {
+        await executeQuery(query.sql, query.params);
+      }
+
+      // Send success response
+      res.json({ message: "Order status updated to 'unreceive' and products restocked successfully" });
+      
+       // Send confirmation email
+       const orderDetailss = await getOrderDetailsForEmail(idDonHang);
+       if (orderDetailss.length === 0) {
+         console.error("Order not found for email");
+         return;
+       }
+   
+       const order = orderDetailss[0];
+       order.items = orderDetailss;
+   
+       await sendOrderEmail(
+         order,
+         idDonHang,
+         "Đơn hàng của bạn đã bị hủy ",
+         "Đơn hàng của bạn đã bị hủy do không nhận hàng"
+       );
+    } catch (error) {
+      console.error("Unexpected error:", error.message);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  },
 };
 
 module.exports = orderController;

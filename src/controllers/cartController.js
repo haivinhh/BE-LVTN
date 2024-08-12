@@ -166,9 +166,11 @@ const cartController = {
   getDetailCart: (req, res) => {
     const idUser = req.user.idUser;
     if (!idUser) {
-      return res.status(400).json({ message: "Missing required field: idUser" });
+      return res
+        .status(400)
+        .json({ message: "Missing required field: idUser" });
     }
-  
+
     const query = `
       SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
              p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
@@ -178,14 +180,14 @@ const cartController = {
       JOIN donhang c ON dc.idDonHang = c.idDonHang
       WHERE c.idUser = ? AND c.trangThai = 'unpaid'
     `;
-  
+
     connection.query(query, [idUser], (err, results) => {
       if (err) {
         return res.status(500).json({ message: err.message });
       }
-  
+
       const cart_id = results.length > 0 ? results[0].idDonHang : null;
-  
+
       if (cart_id) {
         const promotionQuery = `
           SELECT SUM(dc.soLuong) AS totalQuantity, c.idUser, k.KHThanThiet
@@ -195,20 +197,22 @@ const cartController = {
           WHERE dc.idDonHang = ?
           GROUP BY c.idUser, k.KHThanThiet
         `;
-  
+
         connection.query(promotionQuery, [cart_id], (err, promoResults) => {
           if (err) {
             console.error("Error fetching order details:", err);
-            return res.status(500).json({ message: "Failed to apply promotion" });
+            return res
+              .status(500)
+              .json({ message: "Failed to apply promotion" });
           }
-  
+
           if (promoResults.length === 0) {
             return res.status(404).json({ message: "No such order found" });
           }
-  
+
           const { totalQuantity, KHThanThiet } = promoResults[0];
           let discount = 0;
-  
+
           if (totalQuantity > 4) {
             if (KHThanThiet === 1) {
               discount = 0.3; // 30% discount for loyal customers with 5 or more products
@@ -218,28 +222,34 @@ const cartController = {
           } else if (KHThanThiet === 1) {
             discount = 0.2; // 20% discount for loyal customers with fewer than 5 products
           }
-  
+
           console.log("Total Quantity:", totalQuantity);
           console.log("Discount:", discount);
-  
+
           const updateQuery = `
             UPDATE donhang
             SET khuyenMai = ?
             WHERE idDonHang = ? AND trangThai = 'unpaid'
           `;
-  
-          connection.query(updateQuery, [discount, cart_id], (err, updateResult) => {
-            if (err) {
-              console.error("Error updating promotion:", err);
-              return res.status(500).json({ message: "Failed to apply promotion" });
+
+          connection.query(
+            updateQuery,
+            [discount, cart_id],
+            (err, updateResult) => {
+              if (err) {
+                console.error("Error updating promotion:", err);
+                return res
+                  .status(500)
+                  .json({ message: "Failed to apply promotion" });
+              }
+
+              // Update cart total after applying promotion
+              cartController.updateCartTotal(cart_id);
+
+              // Return the cart details with the updated promotion
+              res.json(results);
             }
-  
-            // Update cart total after applying promotion
-            cartController.updateCartTotal(cart_id);
-  
-            // Return the cart details with the updated promotion
-            res.json(results);
-          });
+          );
         });
       } else {
         // No cart found
@@ -247,8 +257,7 @@ const cartController = {
       }
     });
   },
-  
-  
+
   getCart: (req, res) => {
     const idUser = req.user.idUser;
     console.log(idUser);
@@ -653,26 +662,38 @@ const cartController = {
           .json({ message: "Order not found or not valid for the user" });
       }
 
+      // Get the current date and time
+      const currentDate = new Date();
+
       // Update order status to 'waiting' and add recipient details
       const updateOrderQuery = `
-  UPDATE donhang
-  SET trangThai = 'waiting',
-      tenNguoiNhan = ?, 
-      SDT = ?, 
-      diaChi = ?, 
-      phuongThucTT = 'COD'
-  WHERE idDonHang = ?
-`;
+        UPDATE donhang
+        SET trangThai = 'waiting',
+            tenNguoiNhan = ?, 
+            SDT = ?, 
+            diaChi = ?, 
+            phuongThucTT = 'COD',
+            ngayDatHang = ?  
+        WHERE idDonHang = ?
+      `;
 
       connection.query(
         updateOrderQuery,
-        [recipientName, recipientPhone, recipientAddress, idDonHang],
+        [
+          recipientName,
+          recipientPhone,
+          recipientAddress,
+          currentDate,
+          idDonHang,
+        ],
         (err, result) => {
           if (err) {
             console.error("Database query error:", err);
-            return res.status(500).json({
-              message: "Internal server error while updating the order.",
-            });
+            return res
+              .status(500)
+              .json({
+                message: "Internal server error while updating the order.",
+              });
           }
 
           // Optionally, you can check if any rows were affected

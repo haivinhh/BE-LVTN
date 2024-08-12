@@ -88,6 +88,12 @@ router.put("/updateuser", midddlewareController.verifyToken, customersController
 router.get('/address', midddlewareController.verifyToken,customersController.getAddressCus);
 router.put('/address', midddlewareController.verifyToken,customersController.updateAddressCus);
 
+// Route để yêu cầu đặt lại mật khẩu
+router.post('/forgot-password', forgotPasswordController.requestPasswordReset);
+
+// Route để thực hiện đặt lại mật khẩu
+router.post('/reset-password', forgotPasswordController.resetPassword);
+
 //qltaikhoankh
 router.get('/getallcustomers', midddlewareController.verifyTokenAndIsEmployee, customersAccController.getAllCustomers);
 router.get('/getcartbyiduser/:idUser',midddlewareController.verifyTokenAndIsEmployee, customersAccController.getOrdersByCustomerId);
@@ -125,19 +131,18 @@ router.post("/confirmorder",midddlewareController.verifyTokenAndIsEmployee,order
 router.get("/getallcartdelivery",midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCartDelivery);
 router.post("/confirmdone",midddlewareController.verifyTokenAndIsEmployee,orderController.confirmDelivery);
 router.get("/getallcartdone", midddlewareController.verifyTokenAndIsEmployee,orderController.getAllCartDone);
+router.post("/deliveryfailcod",midddlewareController.verifyTokenAndIsEmployee,orderController.deliveryfailCOD)
 
-// Route để yêu cầu đặt lại mật khẩu
-router.post('/forgot-password', forgotPasswordController.requestPasswordReset);
 
-// Route để thực hiện đặt lại mật khẩu
-router.post('/reset-password', forgotPasswordController.resetPassword);
 
+//thanh toán onl và xử lý hoàn tiền 
 router.post('/createpayment', midddlewareController.verifyToken,zalopayController.createPayment);
 router.post('/callback', zalopayController.callback);
 router.post('/check-order-status/:app_trans_id',zalopayController.checkOrderStatus);
 router.post('/refund',  midddlewareController.verifyToken,zalopayController.RefundOrder);
 router.post('/cancelorderonl', midddlewareController.verifyToken,zalopayController.checkOrderStatusAndCancelOrder);
 router.post("/processRefundAndCheckStatus", midddlewareController.verifyToken,zalopayController.processRefundAndCheckStatus);
-router.post("/checko", midddlewareController.verifyToken,zalopayController.checkOrder)
+router.post("/checko", midddlewareController.verifyToken,zalopayController.checkOrder);
+
 
 module.exports = router;

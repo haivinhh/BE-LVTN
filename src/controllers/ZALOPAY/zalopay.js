@@ -4,6 +4,8 @@ const moment = require("moment");
 const qs = require("qs");
 const connection = require("../../models/db"); // Adjust the path as needed
 
+
+
 const config = {
   app_id: "2554",
   key1: "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
@@ -137,10 +139,8 @@ const zalopayController = {
         const dataJson = JSON.parse(dataStr);
         const appTransId = dataJson["app_trans_id"];
         const zpTransId = dataJson["zp_trans_id"]; // Trích xuất zp_trans_id
-        const user_fee_amount= dataJson["user_fee_amount"]
+        const user_fee_amount = dataJson["user_fee_amount"];
 
-       
-        
         console.log(dataJson);
         // Trích xuất số tiền từ dataJson
         const amount = dataJson["amount"];
@@ -151,17 +151,17 @@ const zalopayController = {
 
         // Trích xuất idDonHang từ appTransId
         const idDonHang = appTransId.split("_")[2];
-
+        const currentDate = new Date();
         // Cập nhật trạng thái đơn hàng, thông tin chi tiết và mã giao dịch
         const updateQuery = `
                 UPDATE donhang
-                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?, maGiaoDich = ?, phiDichVu = ?
+                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?, ngayDatHang = ?, maGiaoDich = ?, phiDichVu = ?
                 WHERE idDonHang = ?
             `;
 
         connection.query(
           updateQuery,
-          [tenNguoiNhan, diaChi, SDT, zpTransId,user_fee_amount, idDonHang], // Thêm zpTransId vào các tham số truy vấn
+          [tenNguoiNhan, diaChi, SDT, currentDate, zpTransId, user_fee_amount, idDonHang], // Thêm zpTransId vào các tham số truy vấn
           (err, updateResult) => {
             if (err) {
               console.error("Lỗi cập nhật đơn hàng:", err.message);
@@ -284,11 +284,11 @@ const zalopayController = {
             null
           );
         }
-        
+
         const refund_fee_amount = order.phiDichVu;
-        console.log(refund_fee_amount)
-        const refund_amount = order.tongTienDH - refund_fee_amount ;
-        console.log("b",refund_amount)
+        console.log(refund_fee_amount);
+        const refund_amount = order.tongTienDH - refund_fee_amount;
+        console.log("b", refund_amount);
         // Xử lý hoàn tiền
         const timestamp = Date.now();
         const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // id duy nhất
@@ -668,7 +668,8 @@ const zalopayController = {
       });
     }
   },
-
+ 
+  
   checkOrder: async (req, res) => {
     try {
       const { idDonHang } = req.body;
