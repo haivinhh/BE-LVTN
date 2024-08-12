@@ -13,7 +13,7 @@ const config = {
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
   queryEndpoint: "https://sb-openapi.zalopay.vn/v2/query",
   callback_url:
-    "https://cb12-2405-4803-db30-ccb0-e07d-bc65-7c16-2f0a.ngrok-free.app/api/callback",
+    "https://1a5b-2405-4803-db30-ccb0-151d-63cc-12b4-b15d.ngrok-free.app/api/callback",
   refund_url: "https://sb-openapi.zalopay.vn/v2/refund",
   query_refund_url: "https://sb-openapi.zalopay.vn/v2/query_refund",
 };

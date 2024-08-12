@@ -16,6 +16,7 @@ const customersAccController = require("../controllers/customersAccController");
 const adminController = require("../controllers/adminController");
 const forgotPasswordController = require("../controllers/forgotPasswordController");
 const zalopayController = require("../controllers/ZALOPAY/zalopay");
+const statisticsController = require("../controllers/statisticsController");
 
 //sanpham
 router.get("/sanpham", productController.getAllProducts);
@@ -144,5 +145,9 @@ router.post('/cancelorderonl', midddlewareController.verifyToken,zalopayControll
 router.post("/processRefundAndCheckStatus", midddlewareController.verifyToken,zalopayController.processRefundAndCheckStatus);
 router.post("/checko", midddlewareController.verifyToken,zalopayController.checkOrder);
 
+//thống kê
+router.post('/getmostsoldproducts', midddlewareController.verifyTokenAndIsEmployee,statisticsController.getMostSoldProducts);
+router.post('/gettopcustomers', midddlewareController.verifyTokenAndIsEmployee,statisticsController.getTopCustomers);
+router.post('/getrevenuebyyear', midddlewareController.verifyTokenAndIsEmployee,statisticsController.getRevenueByYear);
 
 module.exports = router;
