@@ -121,7 +121,7 @@ router.get("/getallusers", midddlewareController.verifyTokenAndIsAdmin,adminCont
 router.post("/user/add", midddlewareController.verifyTokenAndIsAdmin,adminController.addUser);
 router.put("/users/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.updateUser);
 router.delete("/users/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.deleteUser);
-router.post("/users/changePassword/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.changePassword);
+router.put('/changePassword', midddlewareController.verifyTokenAndIsAdmin,adminController.changePassword);
 router.get("/confirmorderbyuser/admin/:idNhanVien", midddlewareController.verifyTokenAndIsAdmin,adminController.getConfirmedOrdersByEmployee)
 
 //qldonhang

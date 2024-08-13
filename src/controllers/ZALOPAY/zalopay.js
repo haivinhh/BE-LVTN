@@ -2,7 +2,7 @@ const axios = require("axios");
 const CryptoJS = require("crypto-js");
 const moment = require("moment");
 const qs = require("qs");
-const connection = require("../../models/db"); // Adjust the path as needed
+const connection = require("../../models/db");
 
 
 
@@ -21,10 +21,10 @@ const config = {
 const zalopayController = {
   createPayment: async (req, res) => {
     try {
-      const userId = req.user.idUser; // Extract userId from the token
-      const { tenNguoiNhan, diaChi, SDT } = req.body; // Extract recipient info from request body
+      const userId = req.user.idUser; 
+      const { tenNguoiNhan, diaChi, SDT } = req.body; 
 
-      // Query to get user and order information
+      
       const query = `
             SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
                    p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
@@ -46,10 +46,10 @@ const zalopayController = {
             .json({ message: "No unpaid orders found for the user." });
         }
 
-        const order = results[0]; // Assuming only one unpaid order
+        const order = results[0]; 
         const embed_data = {
           redirecturl: "http://localhost:3000/cart",
-          tenNguoiNhan, // Add recipient info here
+          tenNguoiNhan, 
           diaChi,
           SDT,
         };
@@ -89,7 +89,7 @@ const zalopayController = {
           });
 
           if (result.data.return_code === 1) {
-            // Respond with payment creation success details
+            
             res.status(200).json({
               return_code: result.data.return_code,
               return_message: result.data.return_message,
@@ -124,7 +124,7 @@ const zalopayController = {
   },
 
   callback: (req, res) => {
-    console.log("Callback received:", req.body); // Ghi log yêu cầu nhận được
+    console.log("Callback received:", req.body); 
     let result = {};
     try {
       const dataStr = req.body.data;
@@ -138,18 +138,18 @@ const zalopayController = {
       } else {
         const dataJson = JSON.parse(dataStr);
         const appTransId = dataJson["app_trans_id"];
-        const zpTransId = dataJson["zp_trans_id"]; // Trích xuất zp_trans_id
+        const zpTransId = dataJson["zp_trans_id"]; 
         const user_fee_amount = dataJson["user_fee_amount"];
 
         console.log(dataJson);
-        // Trích xuất số tiền từ dataJson
+        
         const amount = dataJson["amount"];
         console.log(`Số tiền nhận được khi thanh toán thành công: ${amount}`);
         const { tenNguoiNhan, diaChi, SDT } = JSON.parse(
           dataJson["embed_data"]
         );
 
-        // Trích xuất idDonHang từ appTransId
+        
         const idDonHang = appTransId.split("_")[2];
         const currentDate = new Date();
         // Cập nhật trạng thái đơn hàng, thông tin chi tiết và mã giao dịch
