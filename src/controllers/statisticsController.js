@@ -1,7 +1,7 @@
 const connection = require("../models/db");
 
 const statisticsController = {
-  getMostSoldProducts : (req, res) => {
+  getMostSoldProducts: (req, res) => {
     const { year, month } = req.body; // Get year and month from request body
 
     // Build SQL query with conditions to filter by year and month
@@ -52,15 +52,12 @@ const statisticsController = {
       }
       res.json(results);
     });
-},
+  },
 
+  getTopCustomers: (req, res) => {
+    const { year, month } = req.body; // Lấy năm và tháng từ request body
 
-
-  
-getTopCustomers : (req, res) => {
-  const { year, month } = req.body; // Lấy năm và tháng từ request body
-
-  let query = `
+    let query = `
       SELECT 
           taiKhoanKH.idUser,
           taiKhoanKH.hoTen,
@@ -72,47 +69,47 @@ getTopCustomers : (req, res) => {
           donHang ON taiKhoanKH.idUser = donHang.idUser 
           AND donHang.trangThai = 'success'
   `;
-  
-  // Thêm điều kiện lọc năm và tháng
-  if (year && month) {
+
+    // Thêm điều kiện lọc năm và tháng
+    if (year && month) {
       query += `
           AND YEAR(donHang.ngayDatHang) = ? 
           AND MONTH(donHang.ngayDatHang) = ?
       `;
-  } else if (year) {
+    } else if (year) {
       query += `
           AND YEAR(donHang.ngayDatHang) = ?
       `;
-  } else if (month) {
+    } else if (month) {
       query += `
           AND MONTH(donHang.ngayDatHang) = ?
       `;
-  }
+    }
 
-  query += `
+    query += `
       GROUP BY
           taiKhoanKH.idUser, taiKhoanKH.hoTen, taiKhoanKH.userName
       ORDER BY
           tongTienDaMua DESC;
   `;
 
-  const params = [];
-  if (year) params.push(year);
-  if (month) params.push(month);
+    const params = [];
+    if (year) params.push(year);
+    if (month) params.push(month);
 
-  connection.query(query, params, (err, results) => {
+    connection.query(query, params, (err, results) => {
       if (err) {
-          console.error("Error executing query:", err);
-          return res.status(500).send("Server error");
+        console.error("Error executing query:", err);
+        return res.status(500).send("Server error");
       }
       res.json(results);
-  });
-},
-getRevenueByYear : (req, res) => {
-  const { year } = req.body; // Get year from request body
+    });
+  },
+  getRevenueByYear: (req, res) => {
+    const { year } = req.body; // Get year from request body
 
-  // Build SQL query to get revenue by month for the specified year
-  const query = `
+    // Build SQL query to get revenue by month for the specified year
+    const query = `
     SELECT 
       MONTH(donHang.ngayDatHang) AS month,
       COALESCE(SUM(donHang.tongTienDH), 0) AS totalRevenue
@@ -127,17 +124,14 @@ getRevenueByYear : (req, res) => {
       MONTH(donHang.ngayDatHang)
   `;
 
-  console.log(year);
-  connection.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).send(err);
-    }
-    res.json(results);
-  });
-}
-
-
-
+    console.log(year);
+    connection.query(query, (err, results) => {
+      if (err) {
+        return res.status(500).send(err);
+      }
+      res.json(results);
+    });
+  },
 };
 
 module.exports = statisticsController;

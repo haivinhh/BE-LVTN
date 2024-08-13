@@ -38,6 +38,25 @@ const shipController = {
       }
       res.json({ message: "Cập nhật đơn vị vận chuyển thành công" });
     });
+  },
+  
+  deleteDVVC: (req, res) => {
+    const { idDonViVanChuyen } = req.params;
+    const query = "DELETE FROM donViVanChuyen WHERE idDonViVanChuyen = ?";
+    connection.query(query, [idDonViVanChuyen], (err, results) => {
+      if (err) {
+        if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+          return res.status(400).json({
+            message: "Không thể xóa đơn vị vận chuyển này vì có đơn hàng đang sử dụng."
+          });
+        }
+        return res.status(500).send(err);
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: "Không tìm thấy đơn vị vận chuyển" });
+      }
+      res.json({ message: "Xóa đơn vị vận chuyển thành công" });
+    });
   }
   
 };

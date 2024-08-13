@@ -64,6 +64,7 @@ router.delete("/loaidtql/del/:idLoaiDT",middlewareController.verifyTokenAndIsEmp
 router.get("/dvvc",midddlewareController.verifyTokenAndIsEmployee,shipController.getAllDVVC);
 router.post("/dvvc/add", middlewareController.verifyTokenAndIsEmployee,shipController.addDVVC);
 router.put("/dvvc/put/:idDonViVanChuyen",middlewareController.verifyTokenAndIsEmployee,shipController.updateDVVC);
+router.delete('/dvvc/del/:idDonViVanChuyen', middlewareController.verifyTokenAndIsEmployee,shipController.deleteDVVC);
 
 //giohang
 router.post("/cart/add", midddlewareController.verifyToken,cartController.createOrUpdateCart);

@@ -21,7 +21,7 @@ const formatPrice = (price) => {
 };
 const getOrderDetailsForEmail = async (idDonHang) => {
   const query = `
-    SELECT c.tenNguoiNhan, c.SDT, c.diaChi, c.tongTienDH, p.tenSanPham, p.donGia, p.hinhSP, dc.soLuong, kh.email
+    SELECT c.tenNguoiNhan, c.SDT, c.diaChi, c.tongTienDH, p.tenSanPham, p.donGia, p.hinhSP, dc.soLuong, kh.email, kh.hoTen
     FROM donhang c
     JOIN chitietdonhang dc ON c.idDonHang = dc.idDonHang
     JOIN sanpham p ON dc.idSanPham = p.idSanPham
@@ -41,7 +41,7 @@ const getOrderDetailsForEmail = async (idDonHang) => {
 
 const sendOrderEmail = async (order, idDonHang, subject, message) => {
   const emailHTML = `
-    <p><b style="color: black;">Xin chào ${order.tenNguoiNhan},</b></p>
+    <p><b style="color: black;">Xin chào ${order.hoTen},</b></p>
     <p><b style="color: black;">${message}</b></p>
     <p><b style="color: black;">Thông tin đơn hàng:</b></p>
     <ul>
