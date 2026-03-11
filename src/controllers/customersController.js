@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const connection = require("../models/db");
 const jwt = require("jsonwebtoken");
 
+let refreshTokenCuss = [];
+
 const customersController = {
   cusregister: async (req, res) => {
     const { userName, passWord, SDT, email, hoTen } = req.body;
@@ -47,7 +49,8 @@ const customersController = {
 
         const accessToken = customersController.generateAccessToken(results[0]);
         const refreshTokenCus = customersController.generateRefreshToken(results[0]);
-        res.cookie("refreshTokenCus", refreshTokenCus, { httpOnly: true, secure: false, path: "/", sameSite: "strict" });
+        refreshTokenCuss.push(refreshTokenCus);
+        res.cookie("refreshTokenCus", refreshTokenCus, { httpOnly: true, secure: true, path: "/", sameSite: "none" });
         res.status(200).json({ message: true, accessToken });
       });
     } catch (error) {
@@ -57,6 +60,7 @@ const customersController = {
 
   cuslogout: async (req, res) => {
     res.clearCookie("refreshTokenCus");
+    refreshTokenCuss = refreshTokenCuss.filter((token) => token !== req.cookies.refreshTokenCus);
     res.status(200).json("logout thành công");
   },
 
@@ -65,9 +69,11 @@ const customersController = {
     if (!refreshTokenCus) return res.status(401).json("chưa được xác thực");
     jwt.verify(refreshTokenCus, process.env.JWT_REFRESH_KEY, (err, user) => {
       if (err) { console.log(err); return res.status(403).json("Token không hợp lệ"); }
+      refreshTokenCuss = refreshTokenCuss.filter((t) => t !== refreshTokenCus);
       const newAccessTokenCus = customersController.generateAccessToken(user);
       const newRefreshTokenCus = customersController.generateRefreshToken(user);
-      res.cookie("refreshTokenCus", newRefreshTokenCus, { httpOnly: true, secure: false, path: "/", sameSite: "strict" });
+      refreshTokenCuss.push(newRefreshTokenCus);
+      res.cookie("refreshTokenCus", newRefreshTokenCus, { httpOnly: true, secure: true, path: "/", sameSite: "none" });
       res.status(200).json({ accessToken: newAccessTokenCus });
     });
   },

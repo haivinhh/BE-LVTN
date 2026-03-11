@@ -44,7 +44,7 @@ const usersController = {
         const accessToken = usersController.generateAccessToken(results[0]);
         const refreshToken = usersController.generateRefreshToken(results[0]);
         refreshTokens.push(refreshToken);
-        res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: false, path: "/", sameSite: "strict" });
+        res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true, path: "/", sameSite: "none" });
         res.status(200).json({ message: "Đăng nhập thành công.", accessToken });
       });
     } catch (error) {
@@ -67,7 +67,7 @@ const usersController = {
       const newAccessToken = usersController.generateAccessToken(user);
       const newRefreshToken = usersController.generateRefreshToken(user);
       refreshTokens.push(newRefreshToken);
-      res.cookie("refreshToken", newRefreshToken, { httpOnly: true, secure: false, path: "/", sameSite: "strict" });
+      res.cookie("refreshToken", newRefreshToken, { httpOnly: true, secure: true, path: "/", sameSite: "none" });
       res.status(200).json({ accessToken: newAccessToken });
     });
   },
