@@ -10,9 +10,9 @@ const app = express();
 // Sử dụng middleware
 //app.set('trust proxy', 1)
 app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true  // Cho phép gửi và nhận cookie
-  }));
+  origin: 'https://tên-project-của-bạn.vercel.app',
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
     
