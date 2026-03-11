@@ -13,7 +13,7 @@ const config = {
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
   queryEndpoint: "https://sb-openapi.zalopay.vn/v2/query",
   callback_url:
-    "https://c929-2405-4803-db30-ccb0-24cb-e79d-d727-2fa9.ngrok-free.app/api/callback",
+    "https://belvtn.onrender.com/api/callback",
   refund_url: "https://sb-openapi.zalopay.vn/v2/refund",
   query_refund_url: "https://sb-openapi.zalopay.vn/v2/query_refund",
 };
@@ -33,7 +33,7 @@ const zalopayController = {
             JOIN sanpham p ON dc.idSanPham = p.idSanPham
             JOIN donhang c ON dc.idDonHang = c.idDonHang
             JOIN taikhoankh tk ON c.idUser = tk.idUser
-            WHERE c.idUser = ? AND c.trangThai = 'unpaid'
+            WHERE c.idUser = $1 AND c.trangThai = 'unpaid'
         `;
 
       connection.query(query, [userId], async (err, results) => {
@@ -48,7 +48,7 @@ const zalopayController = {
 
         const order = results[0]; // Assuming only one unpaid order
         const embed_data = {
-          redirecturl: "http://localhost:3000/cart",
+          redirecturl: `${process.env.FRONTEND_URL || "http://localhost:3000"}/cart`,
           tenNguoiNhan, // Add recipient info here
           diaChi,
           SDT,
@@ -155,8 +155,8 @@ const zalopayController = {
         // Cập nhật trạng thái đơn hàng, thông tin chi tiết và mã giao dịch
         const updateQuery = `
                 UPDATE donhang
-                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?, ngayDatHang = ?, maGiaoDich = ?, phiDichVu = ?
-                WHERE idDonHang = ?
+                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = $1, diaChi = $2, SDT = $3, ngayDatHang = $4, maGiaoDich = $5, phiDichVu = $6
+                WHERE idDonHang = $7
             `;
 
         connection.query(
@@ -217,8 +217,8 @@ const zalopayController = {
 
         const updateQuery = `
                     UPDATE donhang
-                    SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = ?, diaChi = ?, SDT = ?
-                    WHERE idDonHang = ?
+                    SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = $1, diaChi = $2, SDT = $3
+                    WHERE idDonHang = $4
                 `;
 
         connection.query(
@@ -256,7 +256,7 @@ const zalopayController = {
       const query = `
         SELECT dh.idDonHang, dh.phuongThucTT, dh.trangThai, dh.tongTienDH, dh.maGiaoDich ,  dh.phiDichVu
         FROM donhang dh
-        WHERE dh.idUser = ? AND dh.idDonHang = ?;
+        WHERE dh.idUser = $1 AND dh.idDonHang = $2;
       `;
 
       connection.query(query, [userId, idDonHang], async (err, results) => {
@@ -323,8 +323,8 @@ const zalopayController = {
             // Cập nhật mã hoàn tiền vào cơ sở dữ liệu
             const updateRefundIdQuery = `
               UPDATE donhang
-              SET maHoanTien = ?
-              WHERE idDonHang = ?
+              SET maHoanTien = $1
+              WHERE idDonHang = $2
             `;
 
             connection.query(
@@ -404,7 +404,7 @@ const zalopayController = {
       const getOrderDetailsQuery = `
         SELECT maHoanTien
         FROM donhang
-        WHERE idDonHang = ?
+        WHERE idDonHang = $1
       `;
 
       connection.query(
@@ -489,7 +489,7 @@ const zalopayController = {
                   maGiaoDich = NULL,
                   maHoanTien = NULL,
                   trangThai = 'unpaid'
-              WHERE idDonHang = ?
+              WHERE idDonHang = $1
             `;
 
               connection.query(updateOrderQuery, [idDonHang], (updateErr) => {
@@ -676,7 +676,7 @@ const zalopayController = {
       // Query to get the maHoanTien from the database based on idDonHang
       const getOrderDetailsQuery = `SELECT maHoanTien
       FROM donhang
-      WHERE idDonHang = ?`;
+      WHERE idDonHang = $1`;
 
       connection.query(
         getOrderDetailsQuery,
@@ -742,7 +742,7 @@ const zalopayController = {
                   maGiaoDich = NULL,
                   maHoanTien = NULL,
                   trangThai = 'unpaid'
-              WHERE idDonHang = ?
+              WHERE idDonHang = $1
             `;
 
               connection.query(updateOrderQuery, [idDonHang], (updateErr) => {
