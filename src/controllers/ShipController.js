@@ -1,49 +1,30 @@
-const connection = require('../models/db');
+const BaseRepository = require('../repositories/baseRepository');
+
+const shipRepo = new BaseRepository('donvivanchuyen');
 
 const shipController = {
-  getAllDVVC: (req, res) => {
-    connection.query('SELECT * FROM donvivanchuyen', (err, results) => {
-      if (err) return res.status(500).send(err);
-      res.json(results);
-    });
+  getAllDVVC: async (req, res, next) => {
+    try { res.json(await shipRepo.findAll()); } catch (err) { next(err); }
   },
-  addDVVC: (req, res) => {
-    const { tenDonVi } = req.body;
-    if (!tenDonVi) return res.status(400).json({ message: 'Tên đơn vị vận chuyển là bắt buộc' });
-    connection.query(
-      `INSERT INTO donvivanchuyen ("tenDonVi") VALUES ($1) RETURNING "idDonViVanChuyen"`,
-      [tenDonVi],
-      (err, results) => {
-        if (err) return res.status(500).send(err);
-        res.status(201).json({ message: 'Thêm đơn vị vận chuyển thành công', id: results[0].idDonViVanChuyen });
-      }
-    );
+  addDVVC: async (req, res, next) => {
+    try {
+      const item = await shipRepo.insert({ tenDonVi: req.body.tenDonVi });
+      res.status(201).json({ message: 'Thêm đơn vị vận chuyển thành công', id: item.idDonViVanChuyen });
+    } catch (err) { next(err); }
   },
-  updateDVVC: (req, res) => {
-    const { idDonViVanChuyen } = req.params;
-    const { tenDonVi } = req.body;
-    if (!tenDonVi) return res.status(400).json({ message: 'Tên đơn vị vận chuyển là bắt buộc' });
-    connection.query(
-      `UPDATE donvivanchuyen SET "tenDonVi" = $1 WHERE "idDonViVanChuyen" = $2`,
-      [tenDonVi, idDonViVanChuyen],
-      (err, results) => {
-        if (err) return res.status(500).send(err);
-        if (results.affectedRows === 0) return res.status(404).json({ message: 'Không tìm thấy đơn vị vận chuyển' });
-        res.json({ message: 'Cập nhật đơn vị vận chuyển thành công' });
-      }
-    );
+  updateDVVC: async (req, res, next) => {
+    try {
+      const updated = await shipRepo.update('idDonViVanChuyen', req.params.idDonViVanChuyen, { tenDonVi: req.body.tenDonVi });
+      if (!updated) return res.status(404).json({ message: 'Không tìm thấy đơn vị vận chuyển' });
+      res.json({ message: 'Cập nhật đơn vị vận chuyển thành công' });
+    } catch (err) { next(err); }
   },
-  deleteDVVC: (req, res) => {
-    const { idDonViVanChuyen } = req.params;
-    connection.query(
-      `DELETE FROM donvivanchuyen WHERE "idDonViVanChuyen" = $1`,
-      [idDonViVanChuyen],
-      (err, results) => {
-        if (err) return res.status(500).send(err);
-        if (results.affectedRows === 0) return res.status(404).json({ message: 'Không tìm thấy đơn vị vận chuyển' });
-        res.json({ message: 'Xóa đơn vị vận chuyển thành công' });
-      }
-    );
+  deleteDVVC: async (req, res, next) => {
+    try {
+      const deleted = await shipRepo.delete('idDonViVanChuyen', req.params.idDonViVanChuyen);
+      if (!deleted) return res.status(404).json({ message: 'Không tìm thấy đơn vị vận chuyển' });
+      res.json({ message: 'Xóa đơn vị vận chuyển thành công' });
+    } catch (err) { next(err); }
   },
 };
 

@@ -1,156 +1,69 @@
-const bcrypt = require('bcryptjs');
-const connection = require("../models/db");
-const jwt = require("jsonwebtoken");
+const customerService = require('../services/customerService');
+const authService = require('../services/authService');
 
-let refreshTokenCuss = [];
-
+// This controller mirrors customersAccController but keeps backward compat
+// for routes that use cuslogin, cuslogout naming
 const customersController = {
-  cusregister: async (req, res) => {
-    const { userName, passWord, SDT, email, hoTen } = req.body;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email))
-      return res.status(400).json({ message: "Địa chỉ email không hợp lệ" });
-
-    connection.query('SELECT * FROM taikhoankh WHERE "userName" = $1', [userName], (err, results) => {
-      if (err) return res.status(500).json({ message: "Đăng ký thất bại" });
-      if (results.length > 0)
-        return res.status(400).json({ message: "Tên người dùng đã tồn tại" });
-
-      bcrypt.genSalt(10, (err, salt) => {
-        bcrypt.hash(passWord, salt, (err, hashedPassword) => {
-          if (err) throw err;
-          const sql = `INSERT INTO taikhoankh ("userName","passWord","SDT","email","hoTen") VALUES ($1,$2,$3,$4,$5)`;
-          connection.query(sql, [userName, hashedPassword, SDT, email, hoTen], (err) => {
-            if (err) { console.error(err); return res.status(500).json({ message: "Đăng ký thất bại" }); }
-            res.status(200).json({ message: "Đăng ký thành công" });
-          });
-        });
-      });
-    });
-  },
-
-  generateAccessToken: (user) =>
-    jwt.sign({ idUser: user.idUser }, process.env.JWT_ACCESS_KEY, { expiresIn: "120s" }),
-
-  generateRefreshToken: (user) =>
-    jwt.sign({ idUser: user.idUser }, process.env.JWT_REFRESH_KEY, { expiresIn: "365d" }),
-
-  cuslogin: async (req, res) => {
-    const { userName, passWord } = req.body;
+  cusregister: async (req, res, next) => {
     try {
-      connection.query(`SELECT * FROM taikhoankh WHERE "userName" = $1`, [userName], async (error, results) => {
-        if (error) return res.status(500).json({ message: "Lỗi server khi đăng nhập." });
-        if (results.length === 0)
-          return res.status(404).json({ message: "Tên đăng nhập hoặc mật khẩu không đúng." });
-
-        const match = await bcrypt.compare(passWord, results[0].passWord);
-        if (!match)
-          return res.status(401).json({ message: "Tên đăng nhập hoặc mật khẩu không đúng." });
-
-        const accessToken = customersController.generateAccessToken(results[0]);
-        const refreshTokenCus = customersController.generateRefreshToken(results[0]);
-        refreshTokenCuss.push(refreshTokenCus);
-        res.cookie("refreshTokenCus", refreshTokenCus, { httpOnly: true, secure: true, path: "/", sameSite: "none" });
-        res.status(200).json({ message: true, accessToken });
-      });
-    } catch (error) {
-      res.status(500).json({ message: false });
-    }
+      const result = await customerService.register(req.body);
+      res.status(201).json(result);
+    } catch (err) { next(err); }
   },
 
-  cuslogout: async (req, res) => {
-    res.clearCookie("refreshTokenCus");
-    refreshTokenCuss = refreshTokenCuss.filter((token) => token !== req.cookies.refreshTokenCus);
-    res.status(200).json("logout thành công");
-  },
-
-  requestRefreshToken: async (req, res) => {
-    const refreshTokenCus = req.cookies.refreshTokenCus;
-    if (!refreshTokenCus) return res.status(401).json("chưa được xác thực");
-    jwt.verify(refreshTokenCus, process.env.JWT_REFRESH_KEY, (err, user) => {
-      if (err) { console.log(err); return res.status(403).json("Token không hợp lệ"); }
-      refreshTokenCuss = refreshTokenCuss.filter((t) => t !== refreshTokenCus);
-      const newAccessTokenCus = customersController.generateAccessToken(user);
-      const newRefreshTokenCus = customersController.generateRefreshToken(user);
-      refreshTokenCuss.push(newRefreshTokenCus);
-      res.cookie("refreshTokenCus", newRefreshTokenCus, { httpOnly: true, secure: true, path: "/", sameSite: "none" });
-      res.status(200).json({ accessToken: newAccessTokenCus });
-    });
-  },
-
-  getCusbyId: async (req, res) => {
-    const idUser = req.user.idUser;
-    if (!idUser) return res.status(400).json({ message: "Missing idUser" });
-    connection.query(`SELECT * FROM taikhoankh WHERE "idUser" = $1`, [idUser], (err, results) => {
-      if (err) return res.status(500).json({ message: err.message });
-      res.json(results);
-    });
-  },
-
-  changePassword: async (req, res) => {
-    const { currentPassword, newPassword } = req.body;
-    const idUser = req.user.idUser;
-    if (!idUser) return res.status(400).json({ message: "Missing idUser" });
+  cuslogin: async (req, res, next) => {
     try {
-      connection.query(`SELECT * FROM taikhoankh WHERE "idUser" = $1`, [idUser], async (error, results) => {
-        if (error) return res.status(500).json({ message: "Server error." });
-        if (results.length === 0) return res.status(404).json({ message: "User not found." });
-        const user = results[0];
-        const match = await bcrypt.compare(currentPassword, user.passWord);
-        if (!match) return res.status(401).json({ message: "Current password is incorrect." });
-        const same = await bcrypt.compare(newPassword, user.passWord);
-        if (same) return res.status(400).json({ message: "New password cannot be the same." });
-        bcrypt.genSalt(10, (err, salt) => {
-          bcrypt.hash(newPassword, salt, (err, hashed) => {
-            connection.query(`UPDATE taikhoankh SET "passWord" = $1 WHERE "idUser" = $2`, [hashed, idUser], (err) => {
-              if (err) return res.status(500).json({ message: "Error updating password." });
-              res.status(200).json({ message: "Password changed successfully." });
-            });
-          });
-        });
+      const { userName, passWord } = req.body;
+      const { accessToken, refreshToken } = await customerService.login(userName, passWord);
+      res.cookie('refreshTokenCus', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/', sameSite: 'none',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
-    } catch (error) { res.status(500).json({ message: "Server error." }); }
+      res.status(200).json({ message: true, accessToken });
+    } catch (err) { next(err); }
   },
 
-  updateUser: async (req, res) => {
-    const { hoTen, SDT, email } = req.body;
-    const idUser = req.user.idUser;
-    if (!idUser) return res.status(400).json({ message: "Thiếu idUser" });
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) return res.status(400).json({ message: "Email không hợp lệ" });
-    }
-    const fields = []; const values = [];
-    if (hoTen) { fields.push(`"hoTen" = $${fields.length + 1}`); values.push(hoTen); }
-    if (SDT)   { fields.push(`"SDT" = $${fields.length + 1}`);   values.push(SDT); }
-    if (email) { fields.push(`"email" = $${fields.length + 1}`); values.push(email); }
-    if (fields.length === 0) return res.status(400).json({ message: "Không có trường nào để cập nhật" });
-    values.push(idUser);
-    connection.query(`UPDATE taikhoankh SET ${fields.join(", ")} WHERE "idUser" = $${values.length}`, values, (err) => {
-      if (err) return res.status(500).json({ success: false, message: "Lỗi khi cập nhật." });
-      res.status(200).json({ success: true, message: "Cập nhật thành công." });
-    });
+  cuslogout: async (req, res, next) => {
+    try {
+      await authService.logout(req.cookies.refreshTokenCus);
+      res.clearCookie('refreshTokenCus');
+      res.status(200).json({ message: 'Đăng xuất thành công' });
+    } catch (err) { next(err); }
   },
 
-  getAddressCus: async (req, res) => {
-    const idUser = req.user.idUser;
-    if (!idUser) return res.status(400).json({ message: "Missing idUser" });
-    connection.query(`SELECT "diaChi" FROM taikhoankh WHERE "idUser" = $1`, [idUser], (err, results) => {
-      if (err) return res.status(500).json({ message: err.message });
-      if (results.length === 0) return res.status(404).json({ message: "Address not found" });
-      res.json(results[0]);
-    });
+  requestRefreshToken: async (req, res, next) => {
+    try {
+      const { accessToken, refreshToken } = await authService.refreshAccessToken(req.cookies.refreshTokenCus);
+      res.cookie('refreshTokenCus', refreshToken, {
+        httpOnly: true, secure: process.env.NODE_ENV === 'production',
+        path: '/', sameSite: 'none', maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+      res.status(200).json({ accessToken });
+    } catch (err) { next(err); }
   },
 
-  updateAddressCus: async (req, res) => {
-    const idUser = req.user.idUser;
-    const { newAddress } = req.body;
-    if (!idUser || !newAddress) return res.status(400).json({ message: "Missing idUser or newAddress" });
-    connection.query(`UPDATE taikhoankh SET "diaChi" = $1 WHERE "idUser" = $2`, [newAddress, idUser], (err, result) => {
-      if (err) return res.status(500).json({ message: "Error updating address." });
-      if (result.affectedRows === 0) return res.status(404).json({ message: "User not found." });
-      res.status(200).json({ message: "Address updated successfully." });
-    });
+  getCustomerById: async (req, res, next) => {
+    try {
+      const profile = await customerService.getProfile(req.user.idUser);
+      res.status(200).json(profile);
+    } catch (err) { next(err); }
+  },
+
+  updateCustomer: async (req, res, next) => {
+    try {
+      const updated = await customerService.updateProfile(req.user.idUser, req.body);
+      res.status(200).json({ message: 'Cập nhật thành công', user: updated });
+    } catch (err) { next(err); }
+  },
+
+  changePassword: async (req, res, next) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      const result = await customerService.changePassword(req.user.idUser, oldPassword, newPassword);
+      res.status(200).json(result);
+    } catch (err) { next(err); }
   },
 };
 

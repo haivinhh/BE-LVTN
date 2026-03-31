@@ -26,14 +26,14 @@ const zalopayController = {
 
       // Query to get user and order information
       const query = `
-            SELECT dc.idChiTietDH, dc.idDonHang, dc.idSanPham, dc.soLuong, dc.tongTien,
-                   p.tenSanPham AS tenSanPham, p.donGia AS donGia, p.hinhSP,
-                   c.tongTienDH AS tongTienDH, tk.userName AS userName
+            SELECT dc."idChiTietDH", dc."idDonHang", dc."idSanPham", dc."soLuong", dc."tongTien",
+                   p."tenSanPham" AS "tenSanPham", p."donGia" AS "donGia", p."hinhSP",
+                   c."tongTienDH" AS "tongTienDH", tk."userName" AS "userName"
             FROM chitietdonhang dc
-            JOIN sanpham p ON dc.idSanPham = p.idSanPham
-            JOIN donhang c ON dc.idDonHang = c.idDonHang
-            JOIN taikhoankh tk ON c.idUser = tk.idUser
-            WHERE c.idUser = $1 AND c.trangThai = 'unpaid'
+            JOIN sanpham p ON dc."idSanPham" = p."idSanPham"
+            JOIN donhang c ON dc."idDonHang" = c."idDonHang"
+            JOIN taikhoankh tk ON c."idUser" = tk."idUser"
+            WHERE c."idUser" = $1 AND c."trangThai" = 'unpaid'
         `;
 
       connection.query(query, [userId], async (err, results) => {
@@ -53,8 +53,11 @@ const zalopayController = {
           diaChi,
           SDT,
         };
-        const formatPrice = (price) =>
-          price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+        const formatPrice = (price) => {
+          const num = Number(price);
+          if (!price && price !== 0) return "0 ₫";
+          return num.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+        };
         const transID = Math.floor(Math.random() * 1000000);
         const app_trans_id = `${moment().format("YYMMDD")}_${transID}_${
           order.idDonHang
@@ -67,7 +70,7 @@ const zalopayController = {
           item: JSON.stringify(results),
           embed_data: JSON.stringify(embed_data),
           user_fee_amount: 0,
-          amount: order.tongTienDH,
+          amount: Number(order.tongTienDH) || 0,
           callback_url: config.callback_url,
           description: results
             .map(
@@ -89,7 +92,25 @@ const zalopayController = {
           });
 
           if (result.data.return_code === 1) {
-            // Respond with payment creation success details
+            // Lưu app_trans_id + thông tin người nhận vào DB, nhưng trangThai vẫn 'unpaid'
+            // Chỉ khi callback từ ZaloPay mới update trangThai = 'waiting'
+            const saveInfoQuery = `
+              UPDATE donhang
+              SET "maGiaoDich" = $1, "tenNguoiNhan" = $2, "diaChi" = $3, "SDT" = $4, "phuongThucTT" = 'ONL'
+              WHERE "idDonHang" = $5 AND "trangThai" = 'unpaid'
+            `;
+            connection.query(saveInfoQuery, [
+              orderData.app_trans_id,
+              tenNguoiNhan,
+              diaChi,
+              SDT,
+              order.idDonHang,
+            ], (saveErr) => {
+              if (saveErr) {
+                console.error("Lỗi lưu app_trans_id:", saveErr.message);
+              }
+            });
+
             res.status(200).json({
               return_code: result.data.return_code,
               return_message: result.data.return_message,
@@ -155,8 +176,8 @@ const zalopayController = {
         // Cập nhật trạng thái đơn hàng, thông tin chi tiết và mã giao dịch
         const updateQuery = `
                 UPDATE donhang
-                SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = $1, diaChi = $2, SDT = $3, ngayDatHang = $4, maGiaoDich = $5, phiDichVu = $6
-                WHERE idDonHang = $7
+                SET "trangThai" = 'waiting', "phuongThucTT" = 'ONL', "tenNguoiNhan" = $1, "diaChi" = $2, "SDT" = $3, "ngayDatHang" = $4, "maGiaoDich" = $5, "phiDichVu" = $6
+                WHERE "idDonHang" = $7
             `;
 
         connection.query(
@@ -208,43 +229,16 @@ const zalopayController = {
 
       const result = await axios(postConfig);
 
-      if (result.data.return_code === 1) {
-        // Payment was successful, update the order status
-        const idDonHang = app_trans_id.split("_")[2];
-
-        // Retrieve tenNguoiNhan, diaChi, and SDT from the request body
-        const { tenNguoiNhan, diaChi, SDT } = req.body;
-
-        const updateQuery = `
-                    UPDATE donhang
-                    SET trangThai = 'waiting', phuongThucTT = 'ONL', tenNguoiNhan = $1, diaChi = $2, SDT = $3
-                    WHERE idDonHang = $4
-                `;
-
-        connection.query(
-          updateQuery,
-          [tenNguoiNhan, diaChi, SDT, idDonHang],
-          (err, updateResult) => {
-            if (err) {
-              console.error("Error updating order:", err.message);
-              return res.status(500).json({ message: err.message });
-            }
-
-            console.log(
-              `Order ${idDonHang} updated with recipient details and status set to 'waiting'.`
-            );
-            res.status(200).json({
-              return_code: 1,
-              return_message:
-                "Payment confirmed and order status updated successfully.",
-              data: result.data,
-            });
-          }
-        );
-      } else {
-        // Payment was not successful or another status was returned
-        res.status(200).json(result.data);
-      }
+      // CHỈ trả về trạng thái từ ZaloPay — KHÔNG update DB ở đây.
+      // DB chỉ được update bởi callback webhook (khi ZaloPay xác nhận thanh toán thành công).
+      res.status(200).json({
+        return_code: result.data.return_code,
+        return_message: result.data.return_message,
+        zp_trans_id: result.data.zp_trans_id,
+        // return_code = 1: đã thanh toán, = 2: chưa thanh toán, = 3: đang xử lý
+        paid: result.data.return_code === 1,
+        data: result.data,
+      });
     } catch (error) {
       console.log("Error:", error.message);
       res.status(500).json({ message: error.message });
@@ -254,9 +248,9 @@ const zalopayController = {
     try {
       // Query để kiểm tra thông tin đơn hàng
       const query = `
-        SELECT dh.idDonHang, dh.phuongThucTT, dh.trangThai, dh.tongTienDH, dh.maGiaoDich ,  dh.phiDichVu
+        SELECT dh."idDonHang", dh."phuongThucTT", dh."trangThai", dh."tongTienDH", dh."maGiaoDich" ,  dh."phiDichVu"
         FROM donhang dh
-        WHERE dh.idUser = $1 AND dh.idDonHang = $2;
+        WHERE dh."idUser" = $1 AND dh."idDonHang" = $2;
       `;
 
       connection.query(query, [userId, idDonHang], async (err, results) => {
@@ -285,9 +279,9 @@ const zalopayController = {
           );
         }
 
-        const refund_fee_amount = order.phiDichVu;
+        const refund_fee_amount = Number(order.phiDichVu) || 0;
         console.log(refund_fee_amount);
-        const refund_amount = order.tongTienDH - refund_fee_amount;
+        const refund_amount = Number(order.tongTienDH) - refund_fee_amount;
         console.log("b", refund_amount);
         // Xử lý hoàn tiền
         const timestamp = Date.now();
@@ -323,8 +317,8 @@ const zalopayController = {
             // Cập nhật mã hoàn tiền vào cơ sở dữ liệu
             const updateRefundIdQuery = `
               UPDATE donhang
-              SET maHoanTien = $1
-              WHERE idDonHang = $2
+              SET "maHoanTien" = $1
+              WHERE "idDonHang" = $2
             `;
 
             connection.query(
@@ -402,9 +396,9 @@ const zalopayController = {
     try {
       // Query để lấy mã hoàn tiền từ cơ sở dữ liệu dựa trên idDonHang
       const getOrderDetailsQuery = `
-        SELECT maHoanTien
+        SELECT "maHoanTien"
         FROM donhang
-        WHERE idDonHang = $1
+        WHERE "idDonHang" = $1
       `;
 
       connection.query(
@@ -482,14 +476,14 @@ const zalopayController = {
               // Hoàn tiền thành công, cập nhật đơn hàng
               const updateOrderQuery = `
               UPDATE donhang
-              SET phuongThucTT = NULL,
-                  tenNguoiNhan = NULL,
-                  SDT = NULL,
-                  diaChi = NULL,
-                  maGiaoDich = NULL,
-                  maHoanTien = NULL,
-                  trangThai = 'unpaid'
-              WHERE idDonHang = $1
+              SET "phuongThucTT" = NULL,
+                  "tenNguoiNhan" = NULL,
+                  "SDT" = NULL,
+                  "diaChi" = NULL,
+                  "maGiaoDich" = NULL,
+                  "maHoanTien" = NULL,
+                  "trangThai" = 'unpaid'
+              WHERE "idDonHang" = $1
             `;
 
               connection.query(updateOrderQuery, [idDonHang], (updateErr) => {
@@ -674,9 +668,9 @@ const zalopayController = {
       const { idDonHang } = req.body;
 
       // Query to get the maHoanTien from the database based on idDonHang
-      const getOrderDetailsQuery = `SELECT maHoanTien
+      const getOrderDetailsQuery = `SELECT "maHoanTien"
       FROM donhang
-      WHERE idDonHang = $1`;
+      WHERE "idDonHang" = $1`;
 
       connection.query(
         getOrderDetailsQuery,
@@ -735,14 +729,14 @@ const zalopayController = {
               // Refund was successful, update the order
               const updateOrderQuery = `
               UPDATE donhang
-              SET phuongThucTT = NULL,
-                  tenNguoiNhan = NULL,
-                  SDT = NULL,
-                  diaChi = NULL,
-                  maGiaoDich = NULL,
-                  maHoanTien = NULL,
-                  trangThai = 'unpaid'
-              WHERE idDonHang = $1
+              SET "phuongThucTT" = NULL,
+                  "tenNguoiNhan" = NULL,
+                  "SDT" = NULL,
+                  "diaChi" = NULL,
+                  "maGiaoDich" = NULL,
+                  "maHoanTien" = NULL,
+                  "trangThai" = 'unpaid'
+              WHERE "idDonHang" = $1
             `;
 
               connection.query(updateOrderQuery, [idDonHang], (updateErr) => {
